@@ -548,9 +548,9 @@
                   <div class="field">
                     <label for="supply-type">Alimentação</label>
                     <select id="supply-type">
-                      <option>127/220 V · trifásica</option>
-                      <option>127/220 V · bifásica</option>
-                      <option>220/380 V · trifásica</option>
+                      <option value="three-127-220">127/220 V · trifásica</option>
+                      <option value="two-127-220">127/220 V · bifásica</option>
+                      <option value="three-220-380">220/380 V · trifásica</option>
                     </select>
                   </div>
                   <div class="field">
@@ -570,7 +570,7 @@
               <div class="card-header">
                 <div>
                   <h2>Circuitos</h2>
-                  <p>O sistema separa cargas 127 V e 220 V para montar uma visão inicial do quadro.</p>
+                  <p>O sistema calcula a corrente estimada e organiza uma visão inicial do quadro.</p>
                 </div>
                 <button class="button button-secondary button-compact" type="button" id="add-circuit-secondary">＋ Novo</button>
               </div>
@@ -582,7 +582,7 @@
                       <th>Potência</th>
                       <th>Tensão</th>
                       <th>Fase</th>
-                      <th>Pré-dimensão</th>
+                      <th>Corrente / validação</th>
                     </tr>
                   </thead>
                   <tbody id="circuits-body"></tbody>
@@ -606,7 +606,7 @@
                   <div class="board-legend">
                     <span><i class="legend-dot" style="background:#52c2fa"></i>Fase A</span>
                     <span><i class="legend-dot" style="background:#df9ee0"></i>Fase B</span>
-                    <span><i class="legend-dot" style="background:#c7d65d"></i>Fase C</span>
+                    <span id="phase-c-legend"><i class="legend-dot" style="background:#c7d65d"></i>Fase C</span>
                     <span><i class="legend-dot" style="background:#f2b541"></i>Disjuntor bipolar</span>
                   </div>
                 </div>
@@ -625,15 +625,15 @@
               </div>
               <div class="card-body">
                 <div class="balance-list">
-                  <div class="phase-row"><span class="phase-label">A</span><div class="phase-meter"><div class="phase-fill phase-a-fill" id="phase-a-bar"></div></div><span class="phase-number" id="phase-a-number">—</span></div>
-                  <div class="phase-row"><span class="phase-label">B</span><div class="phase-meter"><div class="phase-fill phase-b-fill" id="phase-b-bar"></div></div><span class="phase-number" id="phase-b-number">—</span></div>
-                  <div class="phase-row"><span class="phase-label">C</span><div class="phase-meter"><div class="phase-fill phase-c-fill" id="phase-c-bar"></div></div><span class="phase-number" id="phase-c-number">—</span></div>
+                  <div class="phase-row" id="phase-a-row"><span class="phase-label">A</span><div class="phase-meter"><div class="phase-fill phase-a-fill" id="phase-a-bar"></div></div><span class="phase-number" id="phase-a-number">—</span></div>
+                  <div class="phase-row" id="phase-b-row"><span class="phase-label">B</span><div class="phase-meter"><div class="phase-fill phase-b-fill" id="phase-b-bar"></div></div><span class="phase-number" id="phase-b-number">—</span></div>
+                  <div class="phase-row" id="phase-c-row"><span class="phase-label">C</span><div class="phase-meter"><div class="phase-fill phase-c-fill" id="phase-c-bar"></div></div><span class="phase-number" id="phase-c-number">—</span></div>
                 </div>
                 <div class="balance-result">
                   <div><span>Diferença entre maior e menor</span><strong id="imbalance-number">—</strong></div>
                   <span class="status-pill" id="balance-status">avaliando</span>
                 </div>
-                <p class="balance-footnote">O ajuste automático move somente circuitos monofásicos livres. Cargas bipolares permanecem na combinação indicada.</p>
+                <p class="balance-footnote">O ajuste automático move somente circuitos monofásicos. Cargas entre fases permanecem na combinação indicada; a leitura é visual, não um critério normativo.</p>
               </div>
             </article>
 
@@ -709,7 +709,7 @@
               <input id="circuit-power" type="number" min="1" required placeholder="Ex.: 1200">
             </div>
           </div>
-          <p class="form-help">O protótipo estimará corrente e mostrará uma pré-dimensão ilustrativa. A conferência técnica continua obrigatória.</p>
+          <p class="form-help">O protótipo estimará a corrente e indicará os dados de instalação ainda necessários. A seleção de condutor e proteção exige validação técnica.</p>
           <div class="modal-actions">
             <button class="button button-secondary" type="button" id="cancel-modal">Cancelar</button>
             <button class="button button-primary" type="submit">Adicionar ao projeto</button>
@@ -720,8 +720,11 @@
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
+    <script src="engine.js"></script>
+    <script src="app.js"></script>
     <script>
       (function () {
+        if (window.ElectricalEngine) return;
         var circuits = [
           { id: 1, name: 'Iluminação social', category: 'Iluminação', voltage: 127, power: 720, phase: 'A' },
           { id: 2, name: 'TUG quartos', category: 'Tomadas de uso geral', voltage: 127, power: 1200, phase: 'B' },
