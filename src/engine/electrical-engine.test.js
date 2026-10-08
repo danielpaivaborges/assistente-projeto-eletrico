@@ -103,3 +103,56 @@ test('bloqueia inventário com ponto incompatível com a alimentação escolhida
     code: 'point-voltage-not-available-in-supply'
   }]);
 });
+
+test('cria circuito rastreável a partir de pontos da mesma tensão', () => {
+  const points = [
+    { id: 'luz-sala', roomId: 'sala', type: 'Iluminação', description: 'Luminária sala', power: 60, voltage: 127 },
+    { id: 'luz-quarto', roomId: 'quarto', type: 'Iluminação', description: 'Luminária quarto', power: 40, voltage: 127 }
+  ];
+  const result = engine.createCircuitFromPoints({
+    id: 'iluminacao',
+    name: 'Iluminação social',
+    category: 'Iluminação',
+    pointIds: ['luz-sala', 'luz-quarto']
+  }, points, [], 'three-127-220');
+
+  assert.equal(result.valid, true);
+  assert.deepEqual(result.circuit, {
+    id: 'iluminacao',
+    name: 'Iluminação social',
+    category: 'Iluminação',
+    pointIds: ['luz-sala', 'luz-quarto'],
+    power: 100,
+    voltage: 127,
+    phase: 'A',
+    powerSource: 'linked-points'
+  });
+});
+
+test('não cria circuito misturando pontos de tensões diferentes', () => {
+  const result = engine.createCircuitFromPoints({
+    id: 'misto',
+    name: 'Carga mista',
+    category: 'Outra carga',
+    pointIds: ['tv', 'chuveiro']
+  }, [
+    { id: 'tv', power: 300, voltage: 127 },
+    { id: 'chuveiro', power: 6800, voltage: 220 }
+  ], [], 'three-127-220');
+
+  assert.equal(result.valid, false);
+  assert.ok(result.issues.some((issue) => issue.code === 'mixed-point-voltages'));
+});
+
+test('detecta ponto vinculado a mais de um circuito', () => {
+  const circuits = [
+    { id: 'c1', powerSource: 'linked-points', pointIds: ['luz'], power: 60, voltage: 127 },
+    { id: 'c2', powerSource: 'linked-points', pointIds: ['luz'], power: 60, voltage: 127 }
+  ];
+  const validation = engine.validatePointCircuitLinks(circuits, [
+    { id: 'luz', power: 60, voltage: 127 }
+  ]);
+
+  assert.equal(validation.valid, false);
+  assert.ok(validation.issues.some((issue) => issue.code === 'point-linked-to-multiple-circuits'));
+});

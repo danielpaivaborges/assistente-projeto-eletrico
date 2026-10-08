@@ -13,7 +13,7 @@
 }(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  var ENGINE_VERSION = '0.3.0-preliminar';
+  var ENGINE_VERSION = '0.4.0-preliminar';
   var ALL_PHASES = ['A', 'B', 'C'];
   var SUPPLIES = {
     'three-127-220': {
@@ -477,21 +477,224 @@
     };
   }
 
+  function uniqueIds(values) {
+    var ids = [];
+
+    (Array.isArray(values) ? values : []).forEach(function (value) {
+      if (value === undefined || value === null || value === '') return;
+      if (ids.indexOf(value) === -1) ids.push(value);
+    });
+
+    return ids;
+  }
+
+  function getPointCircuitTraceability(circuits, points) {
+    var pointById = {};
+    var pointLinks = {};
+    var circuitSummaries = [];
+    var warnings = [];
+
+    (points || []).forEach(function (point, index) {
+      var pointId = point && point.id !== undefined ? point.id : index;
+      pointById[pointId] = point;
+      pointLinks[pointId] = [];
+    });
+
+    (circuits || []).forEach(function (circuit, index) {
+      var circuitId = circuit && circuit.id !== undefined ? circuit.id : index;
+      var rawPointIds = Array.isArray(circuit && circuit.pointIds) ? circuit.pointIds : [];
+      var pointIds = uniqueIds(rawPointIds);
+      var linkedPoints = [];
+      var missingPointIds = [];
+      var linkedPowerW = 0;
+
+      if (rawPointIds.length !== pointIds.length) {
+        warnings.push({ circuitId: circuitId, code: 'duplicate-point-in-circuit' });
+      }
+
+      pointIds.forEach(function (pointId) {
+        var point = pointById[pointId];
+
+        if (!point) {
+          missingPointIds.push(pointId);
+          return;
+        }
+
+        linkedPoints.push(point);
+        pointLinks[pointId].push(circuitId);
+        if (positiveNumber(point.power) !== null) linkedPowerW += Number(point.power);
+      });
+
+      if (missingPointIds.length) {
+        warnings.push({ circuitId: circuitId, code: 'linked-point-not-found', pointIds: missingPointIds });
+      }
+
+      circuitSummaries.push({
+        circuitId: circuitId,
+        pointIds: pointIds,
+        linkedPoints: linkedPoints,
+        linkedPowerW: linkedPowerW,
+        missingPointIds: missingPointIds,
+        source: circuit && circuit.powerSource === 'linked-points' ? 'linked-points' : 'manual'
+      });
+    });
+
+    Object.keys(pointLinks).forEach(function (pointId) {
+      if (pointLinks[pointId].length > 1) {
+        warnings.push({ pointId: pointId, code: 'point-linked-to-multiple-circuits', circuitIds: pointLinks[pointId].slice() });
+      }
+    });
+
+    var byCircuitId = {};
+    circuitSummaries.forEach(function (summary) { byCircuitId[summary.circuitId] = summary; });
+    var unlinkedPointIds = Object.keys(pointLinks).filter(function (pointId) { return pointLinks[pointId].length === 0; });
+    var totals = circuitSummaries.reduce(function (summary, circuit) {
+      if (circuit.linkedPoints.length) summary.circuitsWithPoints += 1;
+      else summary.manualCircuitCount += 1;
+      return summary;
+    }, {
+      circuitCount: circuitSummaries.length,
+      circuitsWithPoints: 0,
+      manualCircuitCount: 0,
+      linkedPointCount: Object.keys(pointLinks).filter(function (pointId) { return pointLinks[pointId].length > 0; }).length,
+      unlinkedPointCount: unlinkedPointIds.length,
+      duplicatePointCount: Object.keys(pointLinks).filter(function (pointId) { return pointLinks[pointId].length > 1; }).length
+    });
+
+    return {
+      circuits: circuitSummaries,
+      byCircuitId: byCircuitId,
+      pointLinks: pointLinks,
+      unlinkedPointIds: unlinkedPointIds,
+      totals: totals,
+      warnings: warnings,
+      rulesetVersion: ENGINE_VERSION
+    };
+  }
+
+  function validatePointCircuitLinks(circuits, points) {
+    var traceability = getPointCircuitTraceability(circuits, points);
+    var issues = traceability.warnings.slice();
+
+    traceability.circuits.forEach(function (summary) {
+      var circuit = (circuits || []).filter(function (item, index) {
+        return (item && item.id !== undefined ? item.id : index) === summary.circuitId;
+      })[0];
+      var linkedVoltages = uniqueIds(summary.linkedPoints.map(function (point) { return point.voltage; }));
+
+      if (!circuit || summary.source !== 'linked-points' || !summary.linkedPoints.length) return;
+
+      if (Number(circuit.power) !== summary.linkedPowerW) {
+        issues.push({ circuitId: summary.circuitId, code: 'linked-circuit-power-diverges-from-points' });
+      }
+
+      if (linkedVoltages.length !== 1 || Number(circuit.voltage) !== Number(linkedVoltages[0])) {
+        issues.push({ circuitId: summary.circuitId, code: 'linked-circuit-voltage-diverges-from-points' });
+      }
+    });
+
+    return {
+      valid: issues.length === 0,
+      issues: issues,
+      traceability: traceability,
+      rulesetVersion: ENGINE_VERSION
+    };
+  }
+
+  function createCircuitFromPoints(draft, points, existingCircuits, supply) {
+    var source = draft || {};
+    var name = normalizedText(source.name);
+    var category = normalizedText(source.category);
+    var rawPointIds = Array.isArray(source.pointIds) ? source.pointIds : [];
+    var pointIds = uniqueIds(rawPointIds);
+    var traceability = getPointCircuitTraceability(existingCircuits, points);
+    var pointById = {};
+    var selectedPoints = [];
+    var issues = [];
+
+    (points || []).forEach(function (point, index) {
+      var pointId = point && point.id !== undefined ? point.id : index;
+      pointById[pointId] = point;
+    });
+
+    if (!name) issues.push({ code: 'missing-circuit-name' });
+    if (!category) issues.push({ code: 'missing-circuit-category' });
+    if (!pointIds.length) issues.push({ code: 'missing-circuit-points' });
+    if (rawPointIds.length !== pointIds.length) issues.push({ code: 'duplicate-point-selection' });
+
+    pointIds.forEach(function (pointId) {
+      var point = pointById[pointId];
+
+      if (!point) {
+        issues.push({ code: 'selected-point-not-found', pointId: pointId });
+        return;
+      }
+
+      if (traceability.pointLinks[pointId] && traceability.pointLinks[pointId].length) {
+        issues.push({ code: 'selected-point-already-linked', pointId: pointId, circuitIds: traceability.pointLinks[pointId].slice() });
+        return;
+      }
+
+      selectedPoints.push(point);
+    });
+
+    var voltages = uniqueIds(selectedPoints.map(function (point) { return point.voltage; }));
+    var power = selectedPoints.reduce(function (sum, point) {
+      var pointPower = positiveNumber(point.power);
+      return pointPower === null ? sum : sum + pointPower;
+    }, 0);
+    var voltage = voltages.length === 1 ? Number(voltages[0]) : null;
+
+    if (selectedPoints.length && voltages.length !== 1) {
+      issues.push({ code: 'mixed-point-voltages' });
+    }
+
+    if (voltage !== null && getSupportedVoltages(supply).indexOf(voltage) === -1) {
+      issues.push({ code: 'point-voltage-not-available-in-supply' });
+    }
+
+    var phase = voltage === null ? null : suggestPhaseAssignment(existingCircuits || [], supply, voltage);
+
+    if (selectedPoints.length && phase === null) {
+      issues.push({ code: 'could-not-suggest-circuit-phase' });
+    }
+
+    return {
+      valid: issues.length === 0,
+      issues: issues,
+      circuit: {
+        id: source.id,
+        name: name,
+        category: category,
+        pointIds: pointIds,
+        power: power,
+        voltage: voltage,
+        phase: phase,
+        powerSource: 'linked-points'
+      },
+      traceability: traceability,
+      rulesetVersion: ENGINE_VERSION
+    };
+  }
+
   return {
     ENGINE_VERSION: ENGINE_VERSION,
     calculateCurrent: calculateCurrent,
     calculateImbalance: calculateImbalance,
     calculatePhaseLoads: calculatePhaseLoads,
     balanceSinglePhaseCircuits: balanceSinglePhaseCircuits,
+    createCircuitFromPoints: createCircuitFromPoints,
     getCircuitPhases: getCircuitPhases,
     getCircuitPoleCount: getCircuitPoleCount,
     getConnectionPhaseCount: getConnectionPhaseCount,
     getSupplyProfile: getSupplyProfile,
     getSupportedVoltages: getSupportedVoltages,
     getSizingReadiness: getSizingReadiness,
+    getPointCircuitTraceability: getPointCircuitTraceability,
     suggestPhaseAssignment: suggestPhaseAssignment,
     summarizeProjectInventory: summarizeProjectInventory,
     validateCircuitsForSupply: validateCircuitsForSupply,
+    validatePointCircuitLinks: validatePointCircuitLinks,
     validatePoint: validatePoint,
     validateProjectInventory: validateProjectInventory,
     validateRoom: validateRoom

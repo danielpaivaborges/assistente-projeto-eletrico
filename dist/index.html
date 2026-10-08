@@ -272,7 +272,7 @@
       .field input:focus, .field select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(22,119,200,.12); }
 
       .table-wrap { overflow-x: auto; }
-      table { width: 100%; border-collapse: collapse; min-width: 670px; }
+      table { width: 100%; border-collapse: collapse; min-width: 790px; }
       th { padding: 11px 12px; border-bottom: 1px solid #dee7ef; color: #6c7b8e; font-size: .69rem; font-weight: 800; letter-spacing: .06em; text-align: left; text-transform: uppercase; }
       td { padding: 12px; border-bottom: 1px solid #edf1f5; color: #31445b; font-size: .86rem; vertical-align: middle; }
       tr:last-child td { border-bottom: 0; }
@@ -297,6 +297,7 @@
       .phase-2p { border-color: #ffd08c; background: #fff5e6; color: #aa6511; }
 
       .technical-line { color: #516477; font-size: .78rem; white-space: nowrap; }
+      .circuit-card-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 
       .board-body { padding: 17px 19px 19px; }
       .board-caption { margin: 0 0 13px; color: var(--muted); font-size: .82rem; }
@@ -400,6 +401,16 @@
       .inventory-power { flex: 0 0 auto; color: #1b5f86; font-size: .78rem; font-weight: 850; }
       .inventory-summary { margin: 15px 0 0; padding-top: 13px; border-top: 1px solid #e8eef4; color: #66788c; font-size: .76rem; }
 
+      .point-circuit-options { display: grid; max-height: 260px; gap: 8px; overflow-y: auto; padding-right: 2px; }
+      .point-circuit-choice { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 11px; border: 1px solid #dce7f0; border-radius: 10px; background: #fbfdff; color: #3b5066; cursor: pointer; }
+      .point-circuit-choice:hover { border-color: #9fc8e3; background: #f4fbff; }
+      .point-circuit-choice input { width: 16px; height: 16px; accent-color: var(--blue); }
+      .point-circuit-choice strong { display: block; overflow: hidden; color: #27425b; font-size: .81rem; text-overflow: ellipsis; white-space: nowrap; }
+      .point-circuit-choice small { display: block; margin-top: 3px; color: #77879a; font-size: .71rem; }
+      .point-circuit-choice em { color: #1875a8; font-size: .76rem; font-style: normal; font-weight: 850; white-space: nowrap; }
+      .point-circuit-selection { margin: 12px 0 0; padding: 10px 11px; border-radius: 9px; background: #eef8ff; color: #38617a; font-size: .76rem; }
+      .point-circuit-empty { margin: 0; padding: 12px; border: 1px dashed #b9c9d7; border-radius: 9px; color: #728196; font-size: .78rem; text-align: center; }
+
       .modal-backdrop {
         position: fixed;
         z-index: 10;
@@ -499,7 +510,7 @@
         </nav>
 
         <div class="side-footer">
-          <strong>Base de regras v0.3</strong><br>
+          <strong>Base de regras v0.4</strong><br>
           Anteprojeto revisável · Brasil
         </div>
       </aside>
@@ -621,9 +632,12 @@
               <div class="card-header">
                 <div>
                   <h2>Circuitos</h2>
-                  <p>O sistema calcula a corrente estimada e organiza uma visão inicial do quadro.</p>
+                  <p>Monte circuitos manualmente ou a partir dos pontos cadastrados.</p>
                 </div>
-                <button class="button button-secondary button-compact" type="button" id="add-circuit-secondary">＋ Novo</button>
+                <div class="circuit-card-actions">
+                  <button class="button button-secondary button-compact" type="button" id="add-circuit-secondary">＋ Manual</button>
+                  <button class="button button-primary button-compact" type="button" id="create-circuit-from-points">↳ Por pontos</button>
+                </div>
               </div>
               <div class="table-wrap">
                 <table aria-label="Circuitos do projeto">
@@ -633,6 +647,7 @@
                       <th>Potência</th>
                       <th>Tensão</th>
                       <th>Fase</th>
+                      <th>Pontos</th>
                       <th>Corrente / validação</th>
                     </tr>
                   </thead>
@@ -806,6 +821,47 @@
           <div class="modal-actions">
             <button class="button button-secondary" type="button" id="cancel-point-modal">Cancelar</button>
             <button class="button button-primary" type="submit">Adicionar ponto</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="point-circuit-modal" role="dialog" aria-modal="true" aria-labelledby="point-circuit-modal-title">
+      <div class="modal" style="width:min(100%,620px)">
+        <div class="modal-header">
+          <div>
+            <h2 id="point-circuit-modal-title">Criar circuito a partir de pontos</h2>
+            <p>A potência e a tensão serão somadas a partir dos pontos escolhidos.</p>
+          </div>
+          <button class="close-button" type="button" id="close-point-circuit-modal" aria-label="Fechar">×</button>
+        </div>
+        <form id="point-circuit-form">
+          <div class="form-grid">
+            <div class="field wide">
+              <label for="point-circuit-name">Nome do circuito</label>
+              <input id="point-circuit-name" required placeholder="Ex.: Iluminação quartos">
+            </div>
+            <div class="field wide">
+              <label for="point-circuit-category">Categoria</label>
+              <select id="point-circuit-category">
+                <option>Iluminação</option>
+                <option>Tomadas de uso geral</option>
+                <option>Tomada de uso específico</option>
+                <option>Chuveiro</option>
+                <option>Ar-condicionado</option>
+                <option>Outra carga</option>
+              </select>
+            </div>
+          </div>
+          <div class="field" style="margin-top:16px">
+            <label>Pontos disponíveis</label>
+            <div class="point-circuit-options" id="point-circuit-options"></div>
+          </div>
+          <p class="point-circuit-selection" id="point-circuit-selection">Selecione um ou mais pontos da mesma tensão.</p>
+          <p class="form-help">A fase é sugerida pelo equilíbrio atual. Esta etapa organiza as cargas; não seleciona condutor ou proteção.</p>
+          <div class="modal-actions">
+            <button class="button button-secondary" type="button" id="cancel-point-circuit-modal">Cancelar</button>
+            <button class="button button-primary" type="submit">Criar circuito</button>
           </div>
         </form>
       </div>

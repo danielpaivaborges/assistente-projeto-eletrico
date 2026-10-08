@@ -13,7 +13,7 @@
     { id: 2, name: 'TUG quartos', category: 'Tomadas de uso geral', voltage: 127, power: 1200, phase: 'B' },
     { id: 3, name: 'TUG sala', category: 'Tomadas de uso geral', voltage: 127, power: 1000, phase: 'C' },
     { id: 4, name: 'Cozinha', category: 'Tomada de uso específico', voltage: 220, power: 3500, phase: 'AB' },
-    { id: 5, name: 'Chuveiro', category: 'Chuveiro', voltage: 220, power: 6800, phase: 'BC' },
+    { id: 5, name: 'Chuveiro', category: 'Chuveiro', voltage: 220, power: 6800, phase: 'BC', pointIds: ['chuveiro'], powerSource: 'linked-points' },
     { id: 6, name: 'Lavanderia', category: 'Tomada de uso específico', voltage: 127, power: 1500, phase: 'A' }
   ];
 
@@ -69,10 +69,12 @@
     inventorySummary: document.getElementById('inventory-summary'),
     inventoryStatus: document.getElementById('inventory-status'),
     circuitModal: document.getElementById('circuit-modal'),
+    pointCircuitModal: document.getElementById('point-circuit-modal'),
     roomModal: document.getElementById('room-modal'),
     pointModal: document.getElementById('point-modal'),
     toast: document.getElementById('toast'),
     circuitForm: document.getElementById('circuit-form'),
+    pointCircuitForm: document.getElementById('point-circuit-form'),
     roomForm: document.getElementById('room-form'),
     pointForm: document.getElementById('point-form'),
     projectName: document.getElementById('project-name'),
@@ -82,6 +84,8 @@
     circuitVoltage: document.getElementById('circuit-voltage'),
     pointVoltage: document.getElementById('point-voltage'),
     pointRoom: document.getElementById('point-room'),
+    pointCircuitOptions: document.getElementById('point-circuit-options'),
+    pointCircuitSelection: document.getElementById('point-circuit-selection'),
     phaseCLegend: document.getElementById('phase-c-legend')
   };
   var activeSupplyKey = elements.supplyType.value;
@@ -124,6 +128,15 @@
     return engine.calculatePhaseLoads(circuits, activePhases());
   }
 
+  function pointCircuitTraceability() {
+    return engine.getPointCircuitTraceability(circuits, points);
+  }
+
+  function getCircuitName(circuitId) {
+    var circuit = circuits.filter(function (item) { return item.id === circuitId; })[0];
+    return circuit ? circuit.name : 'Circuito não localizado';
+  }
+
   function getBalanceView(diff) {
     if (diff === 0) {
       return { word: 'Igual', label: 'sem diferença nas correntes calculadas', tone: '#153f4e', text: '#a4f2d8' };
@@ -148,18 +161,25 @@
   }
 
   function renderCircuits() {
+    var traceability = pointCircuitTraceability();
+
     elements.body.innerHTML = circuits.map(function (circuit) {
       var sizing = engine.getSizingReadiness(circuit);
       var phase = engine.getCircuitPhases(circuit).join('') || '—';
+      var links = traceability.byCircuitId[circuit.id];
       var currentDescription = sizing.currentA === null
         ? sizing.label
         : formatCurrent(sizing.currentA) + ' estimados · ' + sizing.label;
+      var pointDescription = !links || !links.linkedPoints.length
+        ? 'manual · sem pontos vinculados'
+        : links.linkedPoints.length + (links.linkedPoints.length === 1 ? ' ponto vinculado' : ' pontos vinculados');
 
       return '<tr>' +
         '<td><span class="circuit-name">' + escapeHtml(circuit.name) + '</span><span class="circuit-meta">' + escapeHtml(circuit.category) + '</span></td>' +
         '<td>' + formatPower(circuit.power) + '</td>' +
         '<td>' + circuit.voltage + ' V</td>' +
         '<td><span class="phase-badge ' + phaseClass(phase) + '">' + escapeHtml(phase) + '</span></td>' +
+        '<td><span class="technical-line">' + escapeHtml(pointDescription) + '</span></td>' +
         '<td><span class="technical-line">' + escapeHtml(currentDescription) + '</span></td>' +
         '</tr>';
     }).join('');
@@ -261,6 +281,7 @@
   function renderInventory() {
     var summary = engine.summarizeProjectInventory(rooms, points);
     var totals = summary.totals;
+    var traceability = pointCircuitTraceability();
 
     elements.roomsList.innerHTML = summary.rooms.map(function (room) {
       var pointLabel = room.pointCount === 1 ? '1 ponto' : room.pointCount + ' pontos';
@@ -273,14 +294,21 @@
     }).join('');
 
     elements.pointsList.innerHTML = points.map(function (point) {
+      var linkedCircuitIds = traceability.pointLinks[point.id] || [];
+      var circuitStatus = !linkedCircuitIds.length
+        ? 'sem circuito'
+        : linkedCircuitIds.length === 1
+          ? 'circuito: ' + getCircuitName(linkedCircuitIds[0])
+          : 'vínculo em conflito';
+
       return '<div class="inventory-row point-row">' +
-        '<div><span class="inventory-name">' + escapeHtml(point.description) + '</span><span class="inventory-meta"><span class="inventory-type">' + escapeHtml(point.type) + '</span> · ' + escapeHtml(getRoomName(point.roomId)) + ' · ' + point.voltage + ' V</span></div>' +
+        '<div><span class="inventory-name">' + escapeHtml(point.description) + '</span><span class="inventory-meta"><span class="inventory-type">' + escapeHtml(point.type) + '</span> · ' + escapeHtml(getRoomName(point.roomId)) + ' · ' + point.voltage + ' V · ' + escapeHtml(circuitStatus) + '</span></div>' +
         '<span class="inventory-power">' + formatPower(point.power) + '</span>' +
         '</div>';
     }).join('');
 
-    elements.inventoryStatus.textContent = totals.roomCount + ' ambientes';
-    elements.inventorySummary.textContent = totals.pointCount + ' pontos cadastrados · ' + formatPower(totals.plannedPowerW) + ' de potência prevista. Este inventário ainda não gera circuitos automaticamente.';
+    elements.inventoryStatus.textContent = traceability.totals.unlinkedPointCount + ' sem circuito';
+    elements.inventorySummary.textContent = totals.pointCount + ' pontos cadastrados · ' + formatPower(totals.plannedPowerW) + ' de potência prevista · ' + traceability.totals.linkedPointCount + ' ponto(s) já vinculados a circuitos.';
   }
 
   function render() {
@@ -335,10 +363,72 @@
     updateVoltageOptions();
   }
 
+  function selectedPointIdsForCircuit() {
+    return Array.prototype.slice.call(document.querySelectorAll('.point-circuit-option:checked'))
+      .map(function (input) { return input.getAttribute('data-point-id'); });
+  }
+
+  function renderPointCircuitSelection() {
+    var selectedIds = selectedPointIdsForCircuit();
+    var selectedPoints = points.filter(function (point) { return selectedIds.indexOf(String(point.id)) !== -1; });
+    var voltages = selectedPoints.map(function (point) { return point.voltage; }).filter(function (voltage, index, values) {
+      return values.indexOf(voltage) === index;
+    });
+    var power = selectedPoints.reduce(function (sum, point) { return sum + point.power; }, 0);
+
+    if (!selectedPoints.length) {
+      elements.pointCircuitSelection.textContent = 'Selecione um ou mais pontos da mesma tensão.';
+      return;
+    }
+
+    elements.pointCircuitSelection.textContent = voltages.length === 1
+      ? selectedPoints.length + ' ponto(s) · ' + formatPower(power) + ' · ' + voltages[0] + ' V'
+      : selectedPoints.length + ' ponto(s) · tensões diferentes — separe-os em circuitos distintos.';
+  }
+
+  function renderPointCircuitOptions() {
+    var traceability = pointCircuitTraceability();
+    var availablePoints = points.filter(function (point) {
+      return !(traceability.pointLinks[point.id] || []).length;
+    });
+
+    if (!availablePoints.length) {
+      elements.pointCircuitOptions.innerHTML = '<p class="point-circuit-empty">Todos os pontos já estão vinculados a um circuito.</p>';
+      elements.pointCircuitSelection.textContent = 'Adicione novos pontos para criar outro circuito rastreável.';
+      return;
+    }
+
+    elements.pointCircuitOptions.innerHTML = availablePoints.map(function (point) {
+      return '<label class="point-circuit-choice">' +
+        '<input class="point-circuit-option" type="checkbox" data-point-id="' + escapeHtml(point.id) + '">' +
+        '<span><strong>' + escapeHtml(point.description) + '</strong><small>' + escapeHtml(getRoomName(point.roomId)) + ' · ' + escapeHtml(point.type) + ' · ' + point.voltage + ' V</small></span>' +
+        '<em>' + formatPower(point.power) + '</em>' +
+        '</label>';
+    }).join('');
+
+    document.querySelectorAll('.point-circuit-option').forEach(function (input) {
+      input.addEventListener('change', renderPointCircuitSelection);
+    });
+    renderPointCircuitSelection();
+  }
+
+  function openPointCircuitModal() {
+    elements.pointCircuitForm.reset();
+    renderPointCircuitOptions();
+    elements.pointCircuitModal.classList.add('open');
+    window.setTimeout(function () { document.getElementById('point-circuit-name').focus(); }, 60);
+  }
+
+  function closePointCircuitModal() {
+    elements.pointCircuitModal.classList.remove('open');
+    elements.pointCircuitForm.reset();
+  }
+
   function closeAllModals() {
     closeCircuitModal();
     closeRoomModal();
     closePointModal();
+    closePointCircuitModal();
   }
 
   function fillVoltageOptions(control) {
@@ -381,9 +471,12 @@
   }
 
   document.getElementById('add-circuit-secondary').addEventListener('click', openCircuitModal);
+  document.getElementById('create-circuit-from-points').addEventListener('click', openPointCircuitModal);
   document.getElementById('add-point-primary').addEventListener('click', openPointModal);
   document.getElementById('close-modal').addEventListener('click', closeCircuitModal);
   document.getElementById('cancel-modal').addEventListener('click', closeCircuitModal);
+  document.getElementById('close-point-circuit-modal').addEventListener('click', closePointCircuitModal);
+  document.getElementById('cancel-point-circuit-modal').addEventListener('click', closePointCircuitModal);
   document.getElementById('add-room-button').addEventListener('click', openRoomModal);
   document.getElementById('add-point-button').addEventListener('click', openPointModal);
   document.getElementById('close-room-modal').addEventListener('click', closeRoomModal);
@@ -395,6 +488,9 @@
 
   elements.circuitModal.addEventListener('click', function (event) {
     if (event.target === elements.circuitModal) closeCircuitModal();
+  });
+  elements.pointCircuitModal.addEventListener('click', function (event) {
+    if (event.target === elements.pointCircuitModal) closePointCircuitModal();
   });
   elements.roomModal.addEventListener('click', function (event) {
     if (event.target === elements.roomModal) closeRoomModal();
@@ -424,11 +520,39 @@
       category: document.getElementById('circuit-category').value,
       voltage: voltage,
       power: Number(document.getElementById('circuit-power').value),
-      phase: phase
+      phase: phase,
+      powerSource: 'manual'
     });
     closeCircuitModal();
     render();
     toast('Circuito incluído em ' + phase + '. A seleção de proteção e condutor continua pendente de dados técnicos.');
+  });
+
+  elements.pointCircuitForm.addEventListener('submit', function (event) {
+    event.preventDefault();
+
+    var result = engine.createCircuitFromPoints({
+      id: 'circuit-' + Date.now(),
+      name: document.getElementById('point-circuit-name').value.trim(),
+      category: document.getElementById('point-circuit-category').value,
+      pointIds: selectedPointIdsForCircuit()
+    }, points, circuits, currentSupply());
+
+    if (!result.valid) {
+      if (result.issues.some(function (issue) { return issue.code === 'mixed-point-voltages'; })) {
+        toast('Os pontos selecionados têm tensões diferentes. Crie circuitos separados.');
+      } else if (result.issues.some(function (issue) { return issue.code === 'selected-point-already-linked'; })) {
+        toast('Um ponto selecionado já pertence a outro circuito. Revise os vínculos.');
+      } else {
+        toast('Informe o nome, a categoria e ao menos um ponto disponível para criar o circuito.');
+      }
+      return;
+    }
+
+    circuits.push(result.circuit);
+    closePointCircuitModal();
+    render();
+    toast('Circuito criado com ' + result.circuit.pointIds.length + ' ponto(s) e fase ' + result.circuit.phase + '. Revise antes de executar.');
   });
 
   elements.roomForm.addEventListener('submit', function (event) {
@@ -484,10 +608,11 @@
     var requestedSupply = elements.supplyType.value;
     var circuitValidation = engine.validateCircuitsForSupply(circuits, requestedSupply);
     var inventoryValidation = engine.validateProjectInventory(rooms, points, requestedSupply);
+    var traceabilityValidation = engine.validatePointCircuitLinks(circuits, points);
 
-    if (!circuitValidation.valid || !inventoryValidation.valid) {
+    if (!circuitValidation.valid || !inventoryValidation.valid || !traceabilityValidation.valid) {
       elements.supplyType.value = activeSupplyKey;
-      toast('A mudança exige revisar circuitos, fases ou pontos atuais; nenhum dado foi alterado automaticamente.');
+      toast('A mudança exige revisar circuitos, fases, pontos ou vínculos atuais; nenhum dado foi alterado automaticamente.');
       return;
     }
 

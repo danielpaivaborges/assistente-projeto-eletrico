@@ -54,8 +54,10 @@ vm.runInNewContext(appSource, {
 
 assert.match(getElementById('rooms-list').innerHTML, /Sala/);
 assert.match(getElementById('points-list').innerHTML, /Luminária central/);
-assert.equal(getElementById('inventory-status').textContent, '5 ambientes');
+assert.equal(getElementById('inventory-status').textContent, '4 sem circuito');
 assert.match(getElementById('inventory-summary').textContent, /5 pontos cadastrados/);
+assert.match(getElementById('inventory-summary').textContent, /1 ponto\(s\) já vinculados/);
 assert.match(getElementById('circuits-body').innerHTML, /Iluminação social/);
+assert.match(getElementById('circuits-body').innerHTML, /1 ponto vinculado/);
 
 console.log('✔ interface inicializa com ambientes, pontos e circuitos');

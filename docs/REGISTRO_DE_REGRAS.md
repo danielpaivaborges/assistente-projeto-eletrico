@@ -8,6 +8,7 @@ Este arquivo é o inventário de regras do produto. Uma regra só passa a afetar
 | E-002 | Soma por fase | Implementada — modelo de carga | fase(s), potência e tensão | `electrical-engine.test.js` |
 | E-003 | Redistribuição de monofásicos | Implementada — heurística, não normativa | fases disponíveis e cargas | `electrical-engine.test.js` |
 | E-004 | Inventário de ambientes e pontos | Implementada — organização de dados | ambiente, ponto, potência e tensão | `electrical-engine.test.js` |
+| E-005 | Vínculo entre pontos e circuitos | Implementada — rastreabilidade | pontos selecionados, tensão e circuito | `electrical-engine.test.js` |
 | E-010 | Seção de condutor | Bloqueada | método, material, temperatura, agrupamento, trajeto e demais condições | fonte técnica e casos de teste pendentes |
 | E-011 | Disjuntor e proteção | Bloqueada | corrente, condutor, método, coordenação e condições de proteção | fonte técnica e casos de teste pendentes |
 | E-012 | Queda de tensão | Bloqueada | comprimento, condutor, circuito e demanda | fonte técnica e casos de teste pendentes |

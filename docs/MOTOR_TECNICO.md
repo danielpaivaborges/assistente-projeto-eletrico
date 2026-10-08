@@ -14,6 +14,8 @@ O motor está em estado **preliminar**. Ele separa a lógica de cálculo da inte
 - Ocupação visual do quadro a partir da quantidade de polos informada/atribuída.
 - Validação de ambientes e pontos elétricos antes de incorporá-los ao inventário do projeto.
 - Resumo de pontos e potência prevista por ambiente, sem inferir quantitativos normativos.
+- Criação de circuito a partir de pontos da mesma tensão, com potência somada e fase sugerida.
+- Rastreabilidade entre ponto e circuito, incluindo detecção de ponto duplicado ou inexistente.
 
 ## O que ainda não dimensiona
 
