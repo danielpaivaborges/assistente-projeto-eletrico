@@ -385,6 +385,21 @@
       .check-mark { display: grid; width: 20px; height: 20px; flex: 0 0 auto; place-items: center; border-radius: 50%; background: var(--green-soft); color: var(--green); font-size: .73rem; font-weight: 900; }
       .check-pending { background: var(--yellow-soft); color: var(--orange); }
 
+      .inventory-grid { display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); gap: 18px; }
+      .inventory-column { min-width: 0; }
+      .inventory-column + .inventory-column { padding-left: 18px; border-left: 1px solid #e5edf4; }
+      .inventory-column-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+      .inventory-column-head h3 { margin: 0; color: #28445e; font-size: .87rem; }
+      .inventory-column-head p { margin: 3px 0 0; color: #78879a; font-size: .73rem; }
+      .inventory-list { display: grid; gap: 8px; }
+      .inventory-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 54px; padding: 10px 11px; border: 1px solid #e3ebf3; border-radius: 10px; background: #fbfdff; }
+      .inventory-name { display: block; overflow: hidden; color: #244059; font-size: .82rem; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+      .inventory-meta { display: block; margin-top: 3px; color: #78879a; font-size: .72rem; }
+      .inventory-type { color: #1877a9; font-weight: 750; }
+      .inventory-qty { display: grid; width: 27px; height: 27px; flex: 0 0 auto; place-items: center; border-radius: 8px; background: #e9f5fd; color: #1270a3; font-size: .75rem; font-weight: 900; }
+      .inventory-power { flex: 0 0 auto; color: #1b5f86; font-size: .78rem; font-weight: 850; }
+      .inventory-summary { margin: 15px 0 0; padding-top: 13px; border-top: 1px solid #e8eef4; color: #66788c; font-size: .76rem; }
+
       .modal-backdrop {
         position: fixed;
         z-index: 10;
@@ -447,8 +462,9 @@
         .topbar { flex-direction: column; }
         .header-actions { width: 100%; }
         .header-actions .button { flex: 1; }
-        .project-configuration, .form-grid, .side-stack { grid-template-columns: 1fr; }
+        .project-configuration, .form-grid, .side-stack, .inventory-grid { grid-template-columns: 1fr; }
         .form-grid .wide, .side-stack .card:last-child { grid-column: auto; }
+        .inventory-column + .inventory-column { padding-top: 16px; padding-left: 0; border-top: 1px solid #e5edf4; border-left: 0; }
       }
 
       @media (max-width: 460px) {
@@ -483,7 +499,7 @@
         </nav>
 
         <div class="side-footer">
-          <strong>Base de regras v0.1</strong><br>
+          <strong>Base de regras v0.3</strong><br>
           Anteprojeto revisável · Brasil
         </div>
       </aside>
@@ -497,13 +513,13 @@
           </div>
           <div class="header-actions">
             <button class="button button-secondary" id="balance-button" type="button">◒ Equilibrar fases</button>
-            <button class="button button-primary" id="add-circuit-button" type="button">＋ Adicionar circuito</button>
+            <button class="button button-primary" id="add-point-primary" type="button">＋ Adicionar ponto</button>
           </div>
         </header>
 
         <section class="notice" aria-label="Aviso técnico">
           <span class="notice-icon" aria-hidden="true">!</span>
-          <div><strong>Protótipo técnico em evolução.</strong> Os resultados mostrados são de pré-dimensionamento para organizar o projeto. A seleção final de condutores, proteções e critérios normativos exige conferência por profissional habilitado.</div>
+          <div><strong>Protótipo técnico em evolução.</strong> Os resultados organizam o anteprojeto e mostram estimativas de carga. A seleção final de condutores, proteções e critérios normativos exige conferência por profissional habilitado.</div>
         </section>
 
         <section class="metrics" aria-label="Resumo do projeto">
@@ -563,6 +579,41 @@
                     </select>
                   </div>
                 </div>
+              </div>
+            </article>
+
+            <article class="card">
+              <div class="card-header">
+                <div>
+                  <h2>Ambientes e pontos</h2>
+                  <p>Comece pelo imóvel e pelas cargas previstas antes de definir o quadro.</p>
+                </div>
+                <span class="status-pill" id="inventory-status" style="background:#edf7ff;color:#1677ad">—</span>
+              </div>
+              <div class="card-body">
+                <div class="inventory-grid">
+                  <section class="inventory-column" aria-labelledby="rooms-heading">
+                    <div class="inventory-column-head">
+                      <div>
+                        <h3 id="rooms-heading">Ambientes</h3>
+                        <p>Estrutura do imóvel.</p>
+                      </div>
+                      <button class="button button-secondary button-compact" type="button" id="add-room-button">＋ Ambiente</button>
+                    </div>
+                    <div class="inventory-list" id="rooms-list"></div>
+                  </section>
+                  <section class="inventory-column" aria-labelledby="points-heading">
+                    <div class="inventory-column-head">
+                      <div>
+                        <h3 id="points-heading">Pontos elétricos</h3>
+                        <p>Cargas previstas por ambiente.</p>
+                      </div>
+                      <button class="button button-secondary button-compact" type="button" id="add-point-button">＋ Ponto</button>
+                    </div>
+                    <div class="inventory-list" id="points-list"></div>
+                  </section>
+                </div>
+                <p class="inventory-summary" id="inventory-summary">—</p>
               </div>
             </article>
 
@@ -671,6 +722,95 @@
       </main>
     </div>
 
+    <div class="modal-backdrop" id="room-modal" role="dialog" aria-modal="true" aria-labelledby="room-modal-title">
+      <div class="modal">
+        <div class="modal-header">
+          <div>
+            <h2 id="room-modal-title">Adicionar ambiente</h2>
+            <p>Descreva o espaço antes de lançar seus pontos elétricos.</p>
+          </div>
+          <button class="close-button" type="button" id="close-room-modal" aria-label="Fechar">×</button>
+        </div>
+        <form id="room-form">
+          <div class="form-grid">
+            <div class="field wide">
+              <label for="room-name">Nome do ambiente</label>
+              <input id="room-name" required placeholder="Ex.: Escritório">
+            </div>
+            <div class="field">
+              <label for="room-type">Tipo</label>
+              <select id="room-type">
+                <option>Sala</option>
+                <option>Quarto</option>
+                <option>Cozinha</option>
+                <option>Banheiro</option>
+                <option>Lavanderia</option>
+                <option>Área externa</option>
+                <option>Outro ambiente</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="room-area">Área aproximada (m²)</label>
+              <input id="room-area" type="number" min="0.01" step="0.01" placeholder="Opcional">
+            </div>
+          </div>
+          <p class="form-help">A área é apenas descritiva nesta etapa. Regras de quantidade mínima de pontos ainda não são inferidas pelo sistema.</p>
+          <div class="modal-actions">
+            <button class="button button-secondary" type="button" id="cancel-room-modal">Cancelar</button>
+            <button class="button button-primary" type="submit">Adicionar ambiente</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="point-modal" role="dialog" aria-modal="true" aria-labelledby="point-modal-title">
+      <div class="modal">
+        <div class="modal-header">
+          <div>
+            <h2 id="point-modal-title">Adicionar ponto elétrico</h2>
+            <p>Registre uma carga prevista dentro de um ambiente.</p>
+          </div>
+          <button class="close-button" type="button" id="close-point-modal" aria-label="Fechar">×</button>
+        </div>
+        <form id="point-form">
+          <div class="form-grid">
+            <div class="field">
+              <label for="point-room">Ambiente</label>
+              <select id="point-room"></select>
+            </div>
+            <div class="field">
+              <label for="point-type">Tipo</label>
+              <select id="point-type">
+                <option>Iluminação</option>
+                <option>Tomada de uso geral</option>
+                <option>Tomada de uso específico</option>
+                <option>Chuveiro</option>
+                <option>Ar-condicionado</option>
+                <option>Outra carga</option>
+              </select>
+            </div>
+            <div class="field wide">
+              <label for="point-description">Descrição da carga</label>
+              <input id="point-description" required placeholder="Ex.: Computador e monitor">
+            </div>
+            <div class="field">
+              <label for="point-power">Potência prevista (W)</label>
+              <input id="point-power" type="number" min="1" required placeholder="Ex.: 350">
+            </div>
+            <div class="field">
+              <label for="point-voltage">Tensão</label>
+              <select id="point-voltage"></select>
+            </div>
+          </div>
+          <p class="form-help">A potência é uma previsão da carga; ela não substitui a análise de demanda, condutor ou proteção.</p>
+          <div class="modal-actions">
+            <button class="button button-secondary" type="button" id="cancel-point-modal">Cancelar</button>
+            <button class="button button-primary" type="submit">Adicionar ponto</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <div class="modal-backdrop" id="circuit-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
       <div class="modal">
         <div class="modal-header">
@@ -722,265 +862,5 @@
 
     <script src="engine.js"></script>
     <script src="app.js"></script>
-    <script>
-      (function () {
-        if (window.ElectricalEngine) return;
-        var circuits = [
-          { id: 1, name: 'Iluminação social', category: 'Iluminação', voltage: 127, power: 720, phase: 'A' },
-          { id: 2, name: 'TUG quartos', category: 'Tomadas de uso geral', voltage: 127, power: 1200, phase: 'B' },
-          { id: 3, name: 'TUG sala', category: 'Tomadas de uso geral', voltage: 127, power: 1000, phase: 'C' },
-          { id: 4, name: 'Cozinha', category: 'Tomada de uso específico', voltage: 220, power: 3500, phase: 'AB' },
-          { id: 5, name: 'Chuveiro', category: 'Chuveiro', voltage: 220, power: 6800, phase: 'BC' },
-          { id: 6, name: 'Lavanderia', category: 'Tomada de uso específico', voltage: 127, power: 1500, phase: 'A' }
-        ];
-
-        var toastTimer = null;
-        var elements = {
-          body: document.getElementById('circuits-body'),
-          totalPower: document.getElementById('total-power'),
-          circuitCount: document.getElementById('circuit-count'),
-          singleCount: document.getElementById('single-count'),
-          largestCircuit: document.getElementById('largest-circuit'),
-          largestDetail: document.getElementById('largest-detail'),
-          balanceWord: document.getElementById('balance-word'),
-          balanceDetail: document.getElementById('balance-detail'),
-          phaseABar: document.getElementById('phase-a-bar'),
-          phaseBBar: document.getElementById('phase-b-bar'),
-          phaseCBar: document.getElementById('phase-c-bar'),
-          phaseANumber: document.getElementById('phase-a-number'),
-          phaseBNumber: document.getElementById('phase-b-number'),
-          phaseCNumber: document.getElementById('phase-c-number'),
-          imbalance: document.getElementById('imbalance-number'),
-          balanceStatus: document.getElementById('balance-status'),
-          boardRail: document.getElementById('board-rail'),
-          boardModules: document.getElementById('board-modules'),
-          boardCapacity: document.getElementById('board-capacity'),
-          materials: document.getElementById('materials-list'),
-          modal: document.getElementById('circuit-modal'),
-          toast: document.getElementById('toast'),
-          form: document.getElementById('circuit-form'),
-          projectName: document.getElementById('project-name'),
-          projectTitle: document.getElementById('project-title')
-        };
-
-        function formatPower(value) {
-          if (value >= 1000) return (value / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' kW';
-          return value.toLocaleString('pt-BR') + ' W';
-        }
-
-        function currentOf(circuit) {
-          return circuit.power / circuit.voltage;
-        }
-
-        function preDimension(circuit) {
-          var current = currentOf(circuit);
-          if (current <= 10) return { cable: '1,5 mm²', breaker: '10 A' };
-          if (current <= 16) return { cable: '2,5 mm²', breaker: '16 A' };
-          if (current <= 25) return { cable: '4 mm²', breaker: '25 A' };
-          if (current <= 32) return { cable: '6 mm²', breaker: '32 A' };
-          if (current <= 40) return { cable: '10 mm²', breaker: '40 A' };
-          return { cable: 'revisar', breaker: 'revisar' };
-        }
-
-        function phaseClass(phase) {
-          if (phase === 'A') return 'phase-a';
-          if (phase === 'B') return 'phase-b';
-          if (phase === 'C') return 'phase-c';
-          return 'phase-2p';
-        }
-
-        function phaseLoads() {
-          var loads = { A: 0, B: 0, C: 0 };
-          circuits.forEach(function (circuit) {
-            var current = currentOf(circuit);
-            if (circuit.phase.indexOf('A') !== -1) loads.A += current;
-            if (circuit.phase.indexOf('B') !== -1) loads.B += current;
-            if (circuit.phase.indexOf('C') !== -1) loads.C += current;
-          });
-          return loads;
-        }
-
-        function statusFor(diff) {
-          if (diff <= 3) return { word: 'Bom', label: 'bem distribuído', tone: '#153f4e', text: '#a4f2d8' };
-          if (diff <= 8) return { word: 'Atenção', label: 'revisar distribuição', tone: '#553d18', text: '#ffe4a3' };
-          return { word: 'Revisar', label: 'desequilíbrio relevante', tone: '#542635', text: '#ffbec8' };
-        }
-
-        function renderCircuits() {
-          elements.body.innerHTML = circuits.map(function (circuit) {
-            var pre = preDimension(circuit);
-            return '<tr>' +
-              '<td><span class="circuit-name">' + circuit.name + '</span><span class="circuit-meta">' + circuit.category + '</span></td>' +
-              '<td>' + formatPower(circuit.power) + '</td>' +
-              '<td>' + circuit.voltage + ' V</td>' +
-              '<td><span class="phase-badge ' + phaseClass(circuit.phase) + '">' + circuit.phase + '</span></td>' +
-              '<td><span class="technical-line">' + pre.cable + ' · ' + pre.breaker + '</span></td>' +
-              '</tr>';
-          }).join('');
-        }
-
-        function renderMetrics() {
-          var total = circuits.reduce(function (sum, circuit) { return sum + circuit.power; }, 0);
-          var singles = circuits.filter(function (circuit) { return circuit.voltage === 127; });
-          var largest = circuits.reduce(function (current, circuit) { return circuit.power > current.power ? circuit : current; }, circuits[0]);
-          var loads = phaseLoads();
-          var values = [loads.A, loads.B, loads.C];
-          var diff = Math.max.apply(null, values) - Math.min.apply(null, values);
-          var status = statusFor(diff);
-
-          elements.totalPower.textContent = formatPower(total);
-          elements.circuitCount.textContent = String(circuits.length);
-          elements.singleCount.textContent = String(singles.length);
-          elements.largestCircuit.textContent = formatPower(largest.power);
-          elements.largestDetail.textContent = largest.name + ' · ' + largest.voltage + ' V';
-          elements.balanceWord.textContent = status.word;
-          elements.balanceDetail.textContent = status.label;
-        }
-
-        function renderBalance() {
-          var loads = phaseLoads();
-          var max = Math.max(loads.A, loads.B, loads.C, 1);
-          var diff = Math.max(loads.A, loads.B, loads.C) - Math.min(loads.A, loads.B, loads.C);
-          var status = statusFor(diff);
-
-          elements.phaseABar.style.width = (loads.A / max * 100).toFixed(0) + '%';
-          elements.phaseBBar.style.width = (loads.B / max * 100).toFixed(0) + '%';
-          elements.phaseCBar.style.width = (loads.C / max * 100).toFixed(0) + '%';
-          elements.phaseANumber.textContent = loads.A.toFixed(1).replace('.', ',') + ' A';
-          elements.phaseBNumber.textContent = loads.B.toFixed(1).replace('.', ',') + ' A';
-          elements.phaseCNumber.textContent = loads.C.toFixed(1).replace('.', ',') + ' A';
-          elements.imbalance.textContent = diff.toFixed(1).replace('.', ',') + ' A';
-          elements.balanceStatus.textContent = status.label;
-          elements.balanceStatus.style.background = status.tone;
-          elements.balanceStatus.style.color = status.text;
-        }
-
-        function renderBoard() {
-          var modules = 24;
-          var used = circuits.reduce(function (sum, circuit) { return sum + (circuit.voltage === 220 ? 2 : 1); }, 0);
-          var breakerHtml = circuits.map(function (circuit) {
-            var pre = preDimension(circuit);
-            var two = circuit.voltage === 220 ? ' two-pole' : '';
-            return '<div class="breaker' + two + '" title="' + circuit.name + '">' +
-              '<span class="breaker-phase">' + circuit.phase + ' · ' + circuit.voltage + ' V</span>' +
-              '<span class="breaker-name">' + circuit.name + '</span>' +
-              '<span class="breaker-rating">' + pre.breaker + '</span>' +
-              '</div>';
-          }).join('');
-          var empty = Math.max(0, Math.min(4, modules - used));
-          for (var i = 0; i < empty; i += 1) {
-            breakerHtml += '<div class="breaker din-empty"><span class="breaker-phase">DIN</span><span class="breaker-name">Reserva</span><span class="breaker-rating">—</span></div>';
-          }
-          elements.boardRail.innerHTML = breakerHtml;
-          elements.boardModules.textContent = used + ' de ' + modules + ' módulos usados';
-          elements.boardCapacity.textContent = (modules - used) + ' módulos livres';
-        }
-
-        function renderMaterials() {
-          var mono = circuits.filter(function (circuit) { return circuit.voltage === 127; }).length;
-          var bi = circuits.filter(function (circuit) { return circuit.voltage === 220; }).length;
-          var rows = [
-            ['Disjuntores monopolares', mono + ' un.'],
-            ['Disjuntores bipolares', bi + ' un.'],
-            ['Módulos DIN ocupados', circuits.reduce(function (sum, circuit) { return sum + (circuit.voltage === 220 ? 2 : 1); }, 0) + ' un.'],
-            ['Etiquetas de circuito', circuits.length + ' un.'],
-            ['Quadro de distribuição', '1 un.']
-          ];
-          elements.materials.innerHTML = rows.map(function (row) {
-            return '<div class="material-row"><span>' + row[0] + '</span><span class="qty">' + row[1] + '</span></div>';
-          }).join('');
-        }
-
-        function render() {
-          renderCircuits();
-          renderMetrics();
-          renderBalance();
-          renderBoard();
-          renderMaterials();
-        }
-
-        function toast(message) {
-          window.clearTimeout(toastTimer);
-          elements.toast.textContent = message;
-          elements.toast.classList.add('visible');
-          toastTimer = window.setTimeout(function () { elements.toast.classList.remove('visible'); }, 3100);
-        }
-
-        function openModal() {
-          elements.modal.classList.add('open');
-          window.setTimeout(function () { document.getElementById('circuit-label').focus(); }, 60);
-        }
-
-        function closeModal() {
-          elements.modal.classList.remove('open');
-          elements.form.reset();
-        }
-
-        function automaticBalance() {
-          var freeCircuits = circuits.filter(function (circuit) { return circuit.voltage === 127; }).sort(function (a, b) { return b.power - a.power; });
-          var loads = { A: 0, B: 0, C: 0 };
-          circuits.filter(function (circuit) { return circuit.voltage === 220; }).forEach(function (circuit) {
-            var current = currentOf(circuit);
-            if (circuit.phase.indexOf('A') !== -1) loads.A += current;
-            if (circuit.phase.indexOf('B') !== -1) loads.B += current;
-            if (circuit.phase.indexOf('C') !== -1) loads.C += current;
-          });
-          freeCircuits.forEach(function (circuit) {
-            var ordered = ['A', 'B', 'C'].sort(function (first, second) { return loads[first] - loads[second]; });
-            circuit.phase = ordered[0];
-            loads[circuit.phase] += currentOf(circuit);
-          });
-          render();
-          toast('Fases redistribuídas: confira a lógica e as condições reais da instalação.');
-        }
-
-        document.getElementById('add-circuit-button').addEventListener('click', openModal);
-        document.getElementById('add-circuit-secondary').addEventListener('click', openModal);
-        document.getElementById('close-modal').addEventListener('click', closeModal);
-        document.getElementById('cancel-modal').addEventListener('click', closeModal);
-        document.getElementById('balance-button').addEventListener('click', automaticBalance);
-        document.getElementById('balance-secondary').addEventListener('click', automaticBalance);
-        elements.modal.addEventListener('click', function (event) {
-          if (event.target === elements.modal) closeModal();
-        });
-
-        document.addEventListener('keydown', function (event) {
-          if (event.key === 'Escape') closeModal();
-        });
-
-        elements.form.addEventListener('submit', function (event) {
-          event.preventDefault();
-          var voltage = Number(document.getElementById('circuit-voltage').value);
-          var loads = phaseLoads();
-          var phase = voltage === 220 ? 'AB' : ['A', 'B', 'C'].sort(function (a, b) { return loads[a] - loads[b]; })[0];
-          circuits.push({
-            id: Date.now(),
-            name: document.getElementById('circuit-label').value.trim(),
-            category: document.getElementById('circuit-category').value,
-            voltage: voltage,
-            power: Number(document.getElementById('circuit-power').value),
-            phase: phase
-          });
-          closeModal();
-          render();
-          toast('Circuito incluído em ' + phase + '. Revise os critérios técnicos antes de executar.');
-        });
-
-        elements.projectName.addEventListener('input', function () {
-          var name = elements.projectName.value.trim() || 'Projeto sem nome';
-          elements.projectTitle.textContent = name + ' · 127/220 V';
-        });
-
-        document.querySelectorAll('.nav-button[data-message]').forEach(function (button) {
-          button.addEventListener('click', function () {
-            document.querySelectorAll('.nav-button').forEach(function (item) { item.classList.remove('active'); });
-            button.classList.add('active');
-            toast(button.getAttribute('data-message'));
-          });
-        });
-
-        render();
-      }());
-    </script>
   </body>
 </html>

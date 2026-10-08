@@ -13,7 +13,7 @@
 }(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  var ENGINE_VERSION = '0.2.0-preliminar';
+  var ENGINE_VERSION = '0.3.0-preliminar';
   var ALL_PHASES = ['A', 'B', 'C'];
   var SUPPLIES = {
     'three-127-220': {
@@ -42,6 +42,10 @@
   function positiveNumber(value) {
     var numeric = Number(value);
     return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
+  }
+
+  function normalizedText(value) {
+    return String(value === undefined || value === null ? '' : value).trim();
   }
 
   function uniquePhases(value) {
@@ -330,6 +334,149 @@
     };
   }
 
+  function validateRoom(room) {
+    var source = room || {};
+    var name = normalizedText(source.name);
+    var type = normalizedText(source.type) || 'Outro ambiente';
+    var hasArea = source.areaM2 !== undefined && source.areaM2 !== null && source.areaM2 !== '';
+    var area = hasArea ? positiveNumber(source.areaM2) : null;
+    var issues = [];
+
+    if (!name) issues.push({ code: 'missing-room-name' });
+    if (hasArea && area === null) issues.push({ code: 'invalid-room-area' });
+
+    return {
+      valid: issues.length === 0,
+      issues: issues,
+      room: Object.assign({}, source, {
+        name: name,
+        type: type,
+        areaM2: area
+      }),
+      rulesetVersion: ENGINE_VERSION
+    };
+  }
+
+  function validatePoint(point, rooms, supply) {
+    var source = point || {};
+    var description = normalizedText(source.description);
+    var type = normalizedText(source.type);
+    var roomId = source.roomId;
+    var power = positiveNumber(source.power);
+    var voltage = positiveNumber(source.voltage);
+    var knownRoom = (rooms || []).some(function (room) { return room && room.id === roomId; });
+    var issues = [];
+
+    if (!roomId || !knownRoom) issues.push({ code: 'point-room-not-found' });
+    if (!type) issues.push({ code: 'missing-point-type' });
+    if (!description) issues.push({ code: 'missing-point-description' });
+    if (power === null) issues.push({ code: 'invalid-point-power' });
+    if (voltage === null) issues.push({ code: 'invalid-point-voltage' });
+
+    if (supply && voltage !== null && getSupportedVoltages(supply).indexOf(voltage) === -1) {
+      issues.push({ code: 'point-voltage-not-available-in-supply' });
+    }
+
+    return {
+      valid: issues.length === 0,
+      issues: issues,
+      point: Object.assign({}, source, {
+        description: description,
+        type: type,
+        power: power,
+        voltage: voltage
+      }),
+      rulesetVersion: ENGINE_VERSION
+    };
+  }
+
+  function validateProjectInventory(rooms, points, supply) {
+    var roomIds = [];
+    var issues = [];
+    var normalizedRooms = (rooms || []).map(function (room, index) {
+      var validation = validateRoom(room);
+      var roomId = room && room.id !== undefined ? room.id : index;
+
+      validation.issues.forEach(function (issue) {
+        issues.push({ entity: 'room', entityId: roomId, code: issue.code });
+      });
+
+      if (!room || room.id === undefined || room.id === null || room.id === '') {
+        issues.push({ entity: 'room', entityId: roomId, code: 'missing-room-id' });
+      } else if (roomIds.indexOf(room.id) !== -1) {
+        issues.push({ entity: 'room', entityId: room.id, code: 'duplicate-room-id' });
+      } else {
+        roomIds.push(room.id);
+      }
+
+      return validation.room;
+    });
+
+    (points || []).forEach(function (point, index) {
+      var validation = validatePoint(point, normalizedRooms, supply);
+      var pointId = point && point.id !== undefined ? point.id : index;
+
+      validation.issues.forEach(function (issue) {
+        issues.push({ entity: 'point', entityId: pointId, code: issue.code });
+      });
+    });
+
+    return {
+      valid: issues.length === 0,
+      issues: issues,
+      rulesetVersion: ENGINE_VERSION
+    };
+  }
+
+  function summarizeProjectInventory(rooms, points) {
+    var roomSummaries = (rooms || []).map(function (room, index) {
+      var validation = validateRoom(room);
+      var roomId = room && room.id !== undefined ? room.id : index;
+      var roomPoints = [];
+
+      (points || []).forEach(function (point) {
+        if (point && point.roomId === roomId) roomPoints.push(point);
+      });
+
+      var pointTypes = {};
+      var plannedPowerW = 0;
+
+      roomPoints.forEach(function (point) {
+        var pointValidation = validatePoint(point, rooms);
+        var key = normalizedText(point.type) || 'Sem tipo';
+
+        pointTypes[key] = (pointTypes[key] || 0) + 1;
+        if (pointValidation.point.power !== null) plannedPowerW += pointValidation.point.power;
+      });
+
+      return {
+        id: roomId,
+        name: validation.room.name || 'Ambiente sem nome',
+        type: validation.room.type,
+        areaM2: validation.room.areaM2,
+        pointCount: roomPoints.length,
+        plannedPowerW: plannedPowerW,
+        pointTypes: pointTypes
+      };
+    });
+    var knownRoomIds = roomSummaries.map(function (room) { return room.id; });
+    var unassignedPoints = (points || []).filter(function (point) {
+      return !point || knownRoomIds.indexOf(point.roomId) === -1;
+    });
+    var totals = roomSummaries.reduce(function (summary, room) {
+      summary.plannedPowerW += room.plannedPowerW;
+      summary.pointCount += room.pointCount;
+      return summary;
+    }, { roomCount: roomSummaries.length, pointCount: 0, plannedPowerW: 0, unassignedPointCount: unassignedPoints.length });
+
+    return {
+      rooms: roomSummaries,
+      totals: totals,
+      warnings: unassignedPoints.length ? [{ code: 'points-without-known-room', count: unassignedPoints.length }] : [],
+      rulesetVersion: ENGINE_VERSION
+    };
+  }
+
   return {
     ENGINE_VERSION: ENGINE_VERSION,
     calculateCurrent: calculateCurrent,
@@ -343,6 +490,10 @@
     getSupportedVoltages: getSupportedVoltages,
     getSizingReadiness: getSizingReadiness,
     suggestPhaseAssignment: suggestPhaseAssignment,
-    validateCircuitsForSupply: validateCircuitsForSupply
+    summarizeProjectInventory: summarizeProjectInventory,
+    validateCircuitsForSupply: validateCircuitsForSupply,
+    validatePoint: validatePoint,
+    validateProjectInventory: validateProjectInventory,
+    validateRoom: validateRoom
   };
 }));

@@ -12,6 +12,8 @@ O motor está em estado **preliminar**. Ele separa a lógica de cálculo da inte
 - Preservação de circuitos entre fases durante o ajuste automático.
 - Compatibilidade básica entre tensões/fases e o tipo de alimentação escolhido.
 - Ocupação visual do quadro a partir da quantidade de polos informada/atribuída.
+- Validação de ambientes e pontos elétricos antes de incorporá-los ao inventário do projeto.
+- Resumo de pontos e potência prevista por ambiente, sem inferir quantitativos normativos.
 
 ## O que ainda não dimensiona
 

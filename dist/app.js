@@ -17,6 +17,22 @@
     { id: 6, name: 'Lavanderia', category: 'Tomada de uso específico', voltage: 127, power: 1500, phase: 'A' }
   ];
 
+  var rooms = [
+    { id: 'sala', name: 'Sala', type: 'Sala' },
+    { id: 'cozinha', name: 'Cozinha', type: 'Cozinha' },
+    { id: 'quarto-1', name: 'Quarto 1', type: 'Quarto' },
+    { id: 'quarto-2', name: 'Quarto 2', type: 'Quarto' },
+    { id: 'banheiro', name: 'Banheiro', type: 'Banheiro' }
+  ];
+
+  var points = [
+    { id: 'luz-sala', roomId: 'sala', type: 'Iluminação', description: 'Luminária central', power: 60, voltage: 127 },
+    { id: 'tv-rack', roomId: 'sala', type: 'Tomada de uso geral', description: 'TV e rack', power: 300, voltage: 127 },
+    { id: 'bancada', roomId: 'cozinha', type: 'Tomada de uso geral', description: 'Bancada de preparo', power: 1200, voltage: 127 },
+    { id: 'luz-quarto-1', roomId: 'quarto-1', type: 'Iluminação', description: 'Luminária central', power: 60, voltage: 127 },
+    { id: 'chuveiro', roomId: 'banheiro', type: 'Chuveiro', description: 'Chuveiro elétrico', power: 6800, voltage: 220 }
+  ];
+
   var toastTimer = null;
   var elements = {
     body: document.getElementById('circuits-body'),
@@ -48,14 +64,24 @@
     boardModules: document.getElementById('board-modules'),
     boardCapacity: document.getElementById('board-capacity'),
     materials: document.getElementById('materials-list'),
-    modal: document.getElementById('circuit-modal'),
+    roomsList: document.getElementById('rooms-list'),
+    pointsList: document.getElementById('points-list'),
+    inventorySummary: document.getElementById('inventory-summary'),
+    inventoryStatus: document.getElementById('inventory-status'),
+    circuitModal: document.getElementById('circuit-modal'),
+    roomModal: document.getElementById('room-modal'),
+    pointModal: document.getElementById('point-modal'),
     toast: document.getElementById('toast'),
-    form: document.getElementById('circuit-form'),
+    circuitForm: document.getElementById('circuit-form'),
+    roomForm: document.getElementById('room-form'),
+    pointForm: document.getElementById('point-form'),
     projectName: document.getElementById('project-name'),
     projectTitle: document.getElementById('project-title'),
     supplyType: document.getElementById('supply-type'),
     boardSize: document.getElementById('board-size'),
-    voltage: document.getElementById('circuit-voltage'),
+    circuitVoltage: document.getElementById('circuit-voltage'),
+    pointVoltage: document.getElementById('point-voltage'),
+    pointRoom: document.getElementById('point-room'),
     phaseCLegend: document.getElementById('phase-c-legend')
   };
   var activeSupplyKey = elements.supplyType.value;
@@ -227,8 +253,39 @@
     }).join('');
   }
 
+  function getRoomName(roomId) {
+    var room = rooms.filter(function (item) { return item.id === roomId; })[0];
+    return room ? room.name : 'Ambiente não localizado';
+  }
+
+  function renderInventory() {
+    var summary = engine.summarizeProjectInventory(rooms, points);
+    var totals = summary.totals;
+
+    elements.roomsList.innerHTML = summary.rooms.map(function (room) {
+      var pointLabel = room.pointCount === 1 ? '1 ponto' : room.pointCount + ' pontos';
+      var detail = pointLabel + ' · ' + formatPower(room.plannedPowerW) + ' previstos';
+
+      return '<div class="inventory-row room-row">' +
+        '<div><span class="inventory-name">' + escapeHtml(room.name) + '</span><span class="inventory-meta">' + escapeHtml(room.type) + ' · ' + detail + '</span></div>' +
+        '<span class="inventory-qty">' + room.pointCount + '</span>' +
+        '</div>';
+    }).join('');
+
+    elements.pointsList.innerHTML = points.map(function (point) {
+      return '<div class="inventory-row point-row">' +
+        '<div><span class="inventory-name">' + escapeHtml(point.description) + '</span><span class="inventory-meta"><span class="inventory-type">' + escapeHtml(point.type) + '</span> · ' + escapeHtml(getRoomName(point.roomId)) + ' · ' + point.voltage + ' V</span></div>' +
+        '<span class="inventory-power">' + formatPower(point.power) + '</span>' +
+        '</div>';
+    }).join('');
+
+    elements.inventoryStatus.textContent = totals.roomCount + ' ambientes';
+    elements.inventorySummary.textContent = totals.pointCount + ' pontos cadastrados · ' + formatPower(totals.plannedPowerW) + ' de potência prevista. Este inventário ainda não gera circuitos automaticamente.';
+  }
+
   function render() {
     renderProjectTitle();
+    renderInventory();
     renderCircuits();
     renderMetrics();
     renderBalance();
@@ -243,25 +300,69 @@
     toastTimer = window.setTimeout(function () { elements.toast.classList.remove('visible'); }, 3600);
   }
 
-  function openModal() {
-    elements.modal.classList.add('open');
+  function openCircuitModal() {
+    elements.circuitModal.classList.add('open');
     window.setTimeout(function () { document.getElementById('circuit-label').focus(); }, 60);
   }
 
-  function closeModal() {
-    elements.modal.classList.remove('open');
-    elements.form.reset();
+  function closeCircuitModal() {
+    elements.circuitModal.classList.remove('open');
+    elements.circuitForm.reset();
     updateVoltageOptions();
   }
 
-  function updateVoltageOptions() {
-    var supported = engine.getSupportedVoltages(currentSupply());
-    var selected = Number(elements.voltage.value);
+  function openRoomModal() {
+    elements.roomModal.classList.add('open');
+    window.setTimeout(function () { document.getElementById('room-name').focus(); }, 60);
+  }
 
-    elements.voltage.innerHTML = supported.map(function (voltage) {
+  function closeRoomModal() {
+    elements.roomModal.classList.remove('open');
+    elements.roomForm.reset();
+  }
+
+  function openPointModal() {
+    updateRoomOptions();
+    updateVoltageOptions();
+    elements.pointModal.classList.add('open');
+    window.setTimeout(function () { document.getElementById('point-description').focus(); }, 60);
+  }
+
+  function closePointModal() {
+    elements.pointModal.classList.remove('open');
+    elements.pointForm.reset();
+    updateRoomOptions();
+    updateVoltageOptions();
+  }
+
+  function closeAllModals() {
+    closeCircuitModal();
+    closeRoomModal();
+    closePointModal();
+  }
+
+  function fillVoltageOptions(control) {
+    var supported = engine.getSupportedVoltages(currentSupply());
+    var selected = Number(control.value);
+
+    control.innerHTML = supported.map(function (voltage) {
       return '<option value="' + voltage + '">' + voltage + ' V</option>';
     }).join('');
-    elements.voltage.value = supported.indexOf(selected) !== -1 ? String(selected) : String(supported[0]);
+    control.value = supported.indexOf(selected) !== -1 ? String(selected) : String(supported[0]);
+  }
+
+  function updateVoltageOptions() {
+    fillVoltageOptions(elements.circuitVoltage);
+    fillVoltageOptions(elements.pointVoltage);
+  }
+
+  function updateRoomOptions() {
+    var selected = elements.pointRoom.value;
+
+    elements.pointRoom.innerHTML = rooms.map(function (room) {
+      return '<option value="' + escapeHtml(room.id) + '">' + escapeHtml(room.name) + '</option>';
+    }).join('');
+    elements.pointRoom.value = rooms.some(function (room) { return room.id === selected; }) ? selected : (rooms[0] ? rooms[0].id : '');
   }
 
   function automaticBalance() {
@@ -279,25 +380,37 @@
       : 'Nenhum circuito monofásico precisou mudar de fase.');
   }
 
-  document.getElementById('add-circuit-button').addEventListener('click', openModal);
-  document.getElementById('add-circuit-secondary').addEventListener('click', openModal);
-  document.getElementById('close-modal').addEventListener('click', closeModal);
-  document.getElementById('cancel-modal').addEventListener('click', closeModal);
+  document.getElementById('add-circuit-secondary').addEventListener('click', openCircuitModal);
+  document.getElementById('add-point-primary').addEventListener('click', openPointModal);
+  document.getElementById('close-modal').addEventListener('click', closeCircuitModal);
+  document.getElementById('cancel-modal').addEventListener('click', closeCircuitModal);
+  document.getElementById('add-room-button').addEventListener('click', openRoomModal);
+  document.getElementById('add-point-button').addEventListener('click', openPointModal);
+  document.getElementById('close-room-modal').addEventListener('click', closeRoomModal);
+  document.getElementById('cancel-room-modal').addEventListener('click', closeRoomModal);
+  document.getElementById('close-point-modal').addEventListener('click', closePointModal);
+  document.getElementById('cancel-point-modal').addEventListener('click', closePointModal);
   document.getElementById('balance-button').addEventListener('click', automaticBalance);
   document.getElementById('balance-secondary').addEventListener('click', automaticBalance);
 
-  elements.modal.addEventListener('click', function (event) {
-    if (event.target === elements.modal) closeModal();
+  elements.circuitModal.addEventListener('click', function (event) {
+    if (event.target === elements.circuitModal) closeCircuitModal();
+  });
+  elements.roomModal.addEventListener('click', function (event) {
+    if (event.target === elements.roomModal) closeRoomModal();
+  });
+  elements.pointModal.addEventListener('click', function (event) {
+    if (event.target === elements.pointModal) closePointModal();
   });
 
   document.addEventListener('keydown', function (event) {
-    if (event.key === 'Escape') closeModal();
+    if (event.key === 'Escape') closeAllModals();
   });
 
-  elements.form.addEventListener('submit', function (event) {
+  elements.circuitForm.addEventListener('submit', function (event) {
     event.preventDefault();
 
-    var voltage = Number(elements.voltage.value);
+    var voltage = Number(elements.circuitVoltage.value);
     var phase = engine.suggestPhaseAssignment(circuits, currentSupply(), voltage);
 
     if (!phase) {
@@ -313,20 +426,68 @@
       power: Number(document.getElementById('circuit-power').value),
       phase: phase
     });
-    closeModal();
+    closeCircuitModal();
     render();
     toast('Circuito incluído em ' + phase + '. A seleção de proteção e condutor continua pendente de dados técnicos.');
+  });
+
+  elements.roomForm.addEventListener('submit', function (event) {
+    event.preventDefault();
+
+    var areaInput = document.getElementById('room-area').value;
+    var room = {
+      id: 'room-' + Date.now(),
+      name: document.getElementById('room-name').value.trim(),
+      type: document.getElementById('room-type').value,
+      areaM2: areaInput === '' ? null : Number(areaInput)
+    };
+    var validation = engine.validateRoom(room);
+
+    if (!validation.valid) {
+      toast('Informe um nome de ambiente e, se houver área, use um valor maior que zero.');
+      return;
+    }
+
+    rooms.push(validation.room);
+    closeRoomModal();
+    render();
+    toast('Ambiente adicionado. Agora cadastre seus pontos elétricos previstos.');
+  });
+
+  elements.pointForm.addEventListener('submit', function (event) {
+    event.preventDefault();
+
+    var point = {
+      id: 'point-' + Date.now(),
+      roomId: elements.pointRoom.value,
+      type: document.getElementById('point-type').value,
+      description: document.getElementById('point-description').value.trim(),
+      power: Number(document.getElementById('point-power').value),
+      voltage: Number(elements.pointVoltage.value)
+    };
+    var validation = engine.validatePoint(point, rooms, currentSupply());
+
+    if (!validation.valid) {
+      toast('Confira ambiente, tipo, descrição, potência e tensão antes de adicionar o ponto.');
+      return;
+    }
+
+    points.push(validation.point);
+    closePointModal();
+    render();
+    toast('Ponto adicionado ao inventário. A criação do circuito continuará sendo uma decisão revisável.');
   });
 
   elements.projectName.addEventListener('input', renderProjectTitle);
   elements.boardSize.addEventListener('change', renderBoard);
   elements.supplyType.addEventListener('change', function () {
     var requestedSupply = elements.supplyType.value;
-    var validation = engine.validateCircuitsForSupply(circuits, requestedSupply);
+    var circuitValidation = engine.validateCircuitsForSupply(circuits, requestedSupply);
+    var inventoryValidation = engine.validateProjectInventory(rooms, points, requestedSupply);
 
-    if (!validation.valid) {
+    if (!circuitValidation.valid || !inventoryValidation.valid) {
       elements.supplyType.value = activeSupplyKey;
-      toast('A mudança exige revisar circuitos e fases atuais; nenhum circuito foi alterado automaticamente.');
+      toast('A mudança exige revisar circuitos, fases ou pontos atuais; nenhum dado foi alterado automaticamente.');
       return;
     }
 
@@ -344,6 +505,7 @@
     });
   });
 
+  updateRoomOptions();
   updateVoltageOptions();
   render();
 }());

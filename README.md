@@ -2,11 +2,12 @@
 
 Ferramenta em construção para organizar anteprojetos de instalações elétricas residenciais no Brasil.
 
-> Estado atual: **v0.2 — motor preliminar**. A aplicação calcula correntes e organiza circuitos/fases, mas não recomenda seção de condutor ou proteção sem os dados técnicos necessários e regras validadas.
+> Estado atual: **v0.3 — ambientes, pontos e motor preliminar**. A aplicação começa pelo imóvel, registra cargas previstas e organiza circuitos/fases, mas não recomenda seção de condutor ou proteção sem os dados técnicos necessários e regras validadas.
 
 ## O que já funciona
 
 - Cadastro de circuitos e cargas.
+- Cadastro de ambientes e pontos elétricos, com potência/tensão previstas por ambiente.
 - Corrente nominal estimada por potência e tensão.
 - Visualização de corrente por fase.
 - Redistribuição heurística apenas de circuitos monofásicos; cargas entre fases são preservadas.
@@ -46,7 +47,7 @@ O comando atualiza os arquivos de navegador em `dist/` e executa os testes do mo
 
 ## Próximas etapas
 
-1. Criar o cadastro de ambientes, pontos e trajetos.
+1. Registrar trajetos, distâncias e método de instalação por circuito.
 2. Coletar parâmetros de instalação antes de habilitar regras de dimensionamento.
 3. Introduzir regras técnicas com fonte/edição, casos de teste e revisão profissional.
-4. Gerar quadro, lista de materiais e relatório de anteprojeto rastreáveis.
+4. Ligar pontos a circuitos e gerar um relatório de anteprojeto rastreável.

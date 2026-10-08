@@ -52,3 +52,54 @@ test('não oferece dimensionamento de condutor sem dados de instalação', () =>
   assert.equal(readiness.status, 'pending-installation-data');
   assert.ok(readiness.missingInputs.includes('método de instalação'));
 });
+
+test('valida ambiente e ponto antes de usar os dados no projeto', () => {
+  const room = engine.validateRoom({ id: 'sala', name: 'Sala', type: 'Sala', areaM2: 18 });
+  const point = engine.validatePoint({
+    id: 'tv',
+    roomId: 'sala',
+    type: 'Tomada de uso geral',
+    description: 'TV e rack',
+    power: 280,
+    voltage: 127
+  }, [room.room], 'three-127-220');
+
+  assert.equal(room.valid, true);
+  assert.equal(point.valid, true);
+  assert.equal(point.point.power, 280);
+});
+
+test('resume ambientes, pontos e potência prevista sem inferir requisitos normativos', () => {
+  const summary = engine.summarizeProjectInventory([
+    { id: 'sala', name: 'Sala', type: 'Sala' },
+    { id: 'banheiro', name: 'Banheiro', type: 'Banheiro' }
+  ], [
+    { id: 'luz-sala', roomId: 'sala', type: 'Iluminação', description: 'Luminária central', power: 24, voltage: 127 },
+    { id: 'rack', roomId: 'sala', type: 'Tomada de uso geral', description: 'TV e rack', power: 280, voltage: 127 },
+    { id: 'chuveiro', roomId: 'banheiro', type: 'Chuveiro', description: 'Chuveiro elétrico', power: 6800, voltage: 220 }
+  ]);
+
+  assert.deepEqual(summary.totals, {
+    roomCount: 2,
+    pointCount: 3,
+    plannedPowerW: 7104,
+    unassignedPointCount: 0
+  });
+  assert.equal(summary.rooms[0].pointCount, 2);
+  assert.equal(summary.rooms[1].plannedPowerW, 6800);
+});
+
+test('bloqueia inventário com ponto incompatível com a alimentação escolhida', () => {
+  const validation = engine.validateProjectInventory([
+    { id: 'sala', name: 'Sala', type: 'Sala' }
+  ], [
+    { id: 'tv', roomId: 'sala', type: 'Tomada de uso geral', description: 'TV', power: 280, voltage: 127 }
+  ], 'three-220-380');
+
+  assert.equal(validation.valid, false);
+  assert.deepEqual(validation.issues, [{
+    entity: 'point',
+    entityId: 'tv',
+    code: 'point-voltage-not-available-in-supply'
+  }]);
+});
