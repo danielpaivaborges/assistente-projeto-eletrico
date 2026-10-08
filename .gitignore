@@ -1,0 +1,11 @@
+# Artefatos e arquivos locais
+.openai/
+.sites-runtime/
+site.tar.gz
+*.zip
+
+# Sistema operacional e editores
+.DS_Store
+Thumbs.db
+.idea/
+*.iml
