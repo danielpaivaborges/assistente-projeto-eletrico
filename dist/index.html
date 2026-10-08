@@ -1,0 +1,983 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#091d31">
+    <meta name="description" content="Assistente de Projeto Elétrico residencial — protótipo funcional.">
+    <title>Assistente de Projeto Elétrico</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23091d31'/%3E%3Cpath d='M36 5 14 35h16l-2 24 22-31H35z' fill='%23f2b541'/%3E%3C/svg%3E">
+    <style>
+      :root {
+        --navy: #091d31;
+        --navy-2: #102d49;
+        --ink: #172235;
+        --muted: #627189;
+        --canvas: #edf2f7;
+        --surface: #ffffff;
+        --line: #dae2ec;
+        --blue: #1677c8;
+        --blue-dark: #0b5b9c;
+        --blue-soft: #e8f4ff;
+        --yellow: #f2b541;
+        --yellow-soft: #fff6dd;
+        --green: #188868;
+        --green-soft: #e6f7f1;
+        --orange: #c77316;
+        --danger: #be3d4c;
+        --shadow: 0 15px 34px rgba(34, 57, 83, 0.09);
+        --radius: 18px;
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-width: 320px;
+        background: var(--canvas);
+        color: var(--ink);
+        font: 16px/1.45 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      button, input, select { font: inherit; }
+      button { cursor: pointer; }
+
+      .app-shell {
+        display: grid;
+        grid-template-columns: 250px minmax(0, 1fr);
+        min-height: 100vh;
+      }
+
+      .sidebar {
+        display: flex;
+        flex-direction: column;
+        padding: 24px 16px;
+        color: #d6e4f4;
+        background:
+          linear-gradient(155deg, rgba(80, 173, 236, 0.17), transparent 35%),
+          var(--navy);
+      }
+
+      .brand {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        margin: 0 8px 38px;
+        color: #ffffff;
+      }
+
+      .brand-mark {
+        display: grid;
+        width: 38px;
+        height: 38px;
+        place-items: center;
+        border: 1px solid rgba(255,255,255,.22);
+        border-radius: 12px;
+        background: rgba(255,255,255,.08);
+        color: var(--yellow);
+        font-size: 22px;
+      }
+
+      .brand strong {
+        display: block;
+        font-size: .88rem;
+        letter-spacing: .04em;
+      }
+
+      .brand span {
+        display: block;
+        margin-top: 1px;
+        color: #94b1cb;
+        font-size: .75rem;
+      }
+
+      .nav-title {
+        margin: 0 12px 8px;
+        color: #7c9ab5;
+        font-size: .72rem;
+        font-weight: 800;
+        letter-spacing: .11em;
+        text-transform: uppercase;
+      }
+
+      .nav-list { display: grid; gap: 6px; }
+
+      .nav-button {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        width: 100%;
+        padding: 12px;
+        border: 0;
+        border-radius: 11px;
+        background: transparent;
+        color: #c0d2e4;
+        text-align: left;
+        transition: background .18s ease, color .18s ease, transform .18s ease;
+      }
+
+      .nav-button:hover { background: rgba(255,255,255,.06); color: #fff; }
+      .nav-button.active {
+        background: #17476f;
+        color: #ffffff;
+        box-shadow: inset 3px 0 0 var(--yellow);
+      }
+
+      .nav-icon { width: 20px; text-align: center; color: #8cbde2; }
+      .nav-button.active .nav-icon { color: var(--yellow); }
+
+      .side-footer {
+        margin-top: auto;
+        padding: 16px 12px 0;
+        border-top: 1px solid rgba(255,255,255,.11);
+        color: #8ba6c0;
+        font-size: .78rem;
+      }
+
+      .side-footer strong { color: #d4e5f7; }
+
+      .main {
+        min-width: 0;
+        padding: 26px clamp(18px, 4vw, 52px) 46px;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 20px;
+        margin-bottom: 20px;
+      }
+
+      .eyebrow {
+        margin: 0 0 5px;
+        color: var(--blue-dark);
+        font-size: .76rem;
+        font-weight: 800;
+        letter-spacing: .1em;
+        text-transform: uppercase;
+      }
+
+      h1, h2, h3, p { margin-top: 0; }
+      h1 { margin-bottom: 0; font-size: clamp(1.45rem, 2vw, 2rem); line-height: 1.16; }
+      h2 { margin-bottom: 0; font-size: 1.05rem; }
+      h3 { margin-bottom: 0; font-size: .93rem; }
+
+      .project-subtitle { margin: 7px 0 0; color: var(--muted); font-size: .92rem; }
+
+      .header-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 42px;
+        padding: 9px 14px;
+        border: 1px solid transparent;
+        border-radius: 10px;
+        font-size: .9rem;
+        font-weight: 750;
+        transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+      }
+      .button:active { transform: translateY(1px); }
+      .button-primary { background: var(--blue); color: #ffffff; box-shadow: 0 7px 15px rgba(22,119,200,.2); }
+      .button-primary:hover { background: var(--blue-dark); }
+      .button-secondary { border-color: #c7d6e5; background: #fff; color: #23415d; }
+      .button-secondary:hover { background: #f5f9fc; }
+      .button-yellow { background: var(--yellow); color: #142438; }
+      .button-yellow:hover { background: #e9aa2e; }
+      .button-compact { min-height: 36px; padding: 7px 11px; font-size: .83rem; }
+
+      .notice {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        margin-bottom: 22px;
+        padding: 13px 15px;
+        border: 1px solid #f0ddb0;
+        border-radius: 12px;
+        background: var(--yellow-soft);
+        color: #635021;
+        font-size: .87rem;
+      }
+      .notice strong { color: #3f3111; }
+      .notice-icon { color: var(--orange); font-size: 1.05rem; line-height: 1.1; }
+
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 13px;
+        margin-bottom: 20px;
+      }
+
+      .metric {
+        min-height: 104px;
+        padding: 16px;
+        border: 1px solid var(--line);
+        border-radius: 15px;
+        background: rgba(255,255,255,.86);
+        box-shadow: 0 6px 18px rgba(50, 71, 97, .04);
+      }
+      .metric .label { margin-bottom: 5px; color: var(--muted); font-size: .76rem; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; }
+      .metric .value { font-size: 1.52rem; font-weight: 800; letter-spacing: -.035em; }
+      .metric .detail { margin-top: 3px; color: #627189; font-size: .78rem; }
+      .metric.emphasis { border-color: #a8cde9; background: linear-gradient(140deg, #ffffff, #edf8ff); }
+      .metric.emphasis .value { color: var(--blue-dark); }
+
+      .work-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(265px, 320px);
+        gap: 20px;
+        align-items: start;
+      }
+
+      .stack { display: grid; gap: 20px; }
+      .card {
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--surface);
+        box-shadow: var(--shadow);
+      }
+
+      .card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        padding: 17px 19px;
+        border-bottom: 1px solid #e4ebf1;
+      }
+
+      .card-header p { margin: 3px 0 0; color: var(--muted); font-size: .82rem; }
+      .card-body { padding: 18px 19px; }
+
+      .project-configuration {
+        display: grid;
+        grid-template-columns: 1.7fr 1fr 1fr;
+        gap: 12px;
+      }
+
+      .field { display: grid; gap: 6px; }
+      .field label { color: #56667d; font-size: .76rem; font-weight: 750; }
+      .field input, .field select {
+        width: 100%;
+        min-height: 42px;
+        padding: 9px 10px;
+        border: 1px solid #cbd8e4;
+        border-radius: 9px;
+        background: #ffffff;
+        color: #1c2d41;
+        outline: none;
+      }
+      .field input:focus, .field select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(22,119,200,.12); }
+
+      .table-wrap { overflow-x: auto; }
+      table { width: 100%; border-collapse: collapse; min-width: 670px; }
+      th { padding: 11px 12px; border-bottom: 1px solid #dee7ef; color: #6c7b8e; font-size: .69rem; font-weight: 800; letter-spacing: .06em; text-align: left; text-transform: uppercase; }
+      td { padding: 12px; border-bottom: 1px solid #edf1f5; color: #31445b; font-size: .86rem; vertical-align: middle; }
+      tr:last-child td { border-bottom: 0; }
+      tr:hover td { background: #fbfdff; }
+      .circuit-name { color: #162d46; font-weight: 750; }
+      .circuit-meta { display: block; margin-top: 2px; color: #7b899a; font-size: .73rem; }
+
+      .phase-badge {
+        display: inline-grid;
+        min-width: 32px;
+        place-items: center;
+        padding: 4px 7px;
+        border: 1px solid;
+        border-radius: 7px;
+        font-size: .71rem;
+        font-weight: 850;
+        letter-spacing: .04em;
+      }
+      .phase-a { border-color: #a9d5ef; background: #edf9ff; color: #0877ac; }
+      .phase-b { border-color: #e3bee2; background: #fff1ff; color: #985293; }
+      .phase-c { border-color: #d2dc96; background: #f5f9df; color: #6e7f13; }
+      .phase-2p { border-color: #ffd08c; background: #fff5e6; color: #aa6511; }
+
+      .technical-line { color: #516477; font-size: .78rem; white-space: nowrap; }
+
+      .board-body { padding: 17px 19px 19px; }
+      .board-caption { margin: 0 0 13px; color: var(--muted); font-size: .82rem; }
+      .board {
+        display: grid;
+        gap: 12px;
+        padding: 14px;
+        border: 1px solid #9badbf;
+        border-radius: 12px;
+        background: linear-gradient(145deg, #eff4f8, #dce6ee);
+      }
+      .board-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        color: #2a4057;
+        font-size: .75rem;
+        font-weight: 800;
+        letter-spacing: .06em;
+        text-transform: uppercase;
+      }
+      .board-rail {
+        display: flex;
+        min-height: 92px;
+        gap: 7px;
+        align-items: stretch;
+        padding: 10px;
+        overflow-x: auto;
+        border: 6px solid #64778a;
+        border-left-width: 7px;
+        border-right-width: 7px;
+        border-radius: 7px;
+        background:
+          repeating-linear-gradient(90deg, rgba(255,255,255,.45) 0 22px, transparent 22px 26px),
+          #b6c5d1;
+      }
+      .breaker {
+        display: flex;
+        width: 62px;
+        min-width: 62px;
+        flex-direction: column;
+        justify-content: space-between;
+        padding: 8px 6px 6px;
+        border: 1px solid #a8b5c2;
+        border-radius: 5px;
+        background: #ffffff;
+        box-shadow: 0 2px 4px rgba(20, 40, 60, .16);
+        color: #23394f;
+      }
+      .breaker.two-pole { width: 114px; min-width: 114px; border-top: 4px solid var(--yellow); }
+      .breaker-phase { align-self: flex-start; color: #6c7a8a; font-size: .6rem; font-weight: 850; }
+      .breaker-name { overflow: hidden; font-size: .64rem; font-weight: 800; line-height: 1.1; text-overflow: ellipsis; white-space: nowrap; }
+      .breaker-rating { color: var(--blue-dark); font-size: .72rem; font-weight: 900; }
+      .breaker.din-empty { border-style: dashed; background: rgba(255,255,255,.28); box-shadow: none; color: #9babba; }
+      .board-legend { display: flex; flex-wrap: wrap; gap: 9px; color: #5d6f81; font-size: .73rem; }
+      .legend-dot { display: inline-block; width: 8px; height: 8px; margin-right: 4px; border-radius: 50%; vertical-align: 1px; }
+
+      .balance-card { background: linear-gradient(160deg, #102e48, #0c2137); color: #ffffff; }
+      .balance-card .card-header { border-bottom-color: rgba(255,255,255,.12); }
+      .balance-card .card-header p { color: #a6bfd4; }
+      .balance-card .button-secondary { border-color: #63829b; background: transparent; color: #f4f9ff; }
+      .balance-card .button-secondary:hover { background: rgba(255,255,255,.1); }
+      .balance-list { display: grid; gap: 13px; }
+      .phase-row { display: grid; grid-template-columns: 29px 1fr auto; gap: 10px; align-items: center; }
+      .phase-label { display: grid; width: 29px; height: 29px; place-items: center; border-radius: 8px; background: rgba(255,255,255,.13); color: #ffffff; font-size: .75rem; font-weight: 900; }
+      .phase-meter { height: 8px; overflow: hidden; border-radius: 999px; background: rgba(255,255,255,.13); }
+      .phase-fill { height: 100%; border-radius: inherit; transition: width .35s ease; }
+      .phase-a-fill { background: #52c2fa; }
+      .phase-b-fill { background: #df9ee0; }
+      .phase-c-fill { background: #c7d65d; }
+      .phase-number { min-width: 58px; color: #e7f2fb; font-size: .76rem; font-weight: 800; text-align: right; }
+      .balance-result { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; margin-top: 18px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,.12); }
+      .balance-result span { color: #a4c0d8; font-size: .75rem; }
+      .balance-result strong { display: block; margin-top: 2px; font-size: .98rem; }
+      .status-pill { padding: 6px 9px; border-radius: 999px; background: #153f4e; color: #a4f2d8; font-size: .72rem; font-weight: 850; }
+      .balance-footnote { margin: 15px 0 0; color: #98b1c6; font-size: .71rem; line-height: 1.45; }
+
+      .materials-list { display: grid; gap: 11px; }
+      .material-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: #3d5065; font-size: .84rem; }
+      .material-row .qty { padding: 3px 8px; border-radius: 999px; background: #eaf3fb; color: var(--blue-dark); font-size: .73rem; font-weight: 850; }
+      .material-note { margin: 15px 0 0; padding-top: 13px; border-top: 1px solid #e8eef4; color: #738295; font-size: .75rem; }
+
+      .checklist { display: grid; gap: 10px; }
+      .check { display: flex; align-items: flex-start; gap: 10px; color: #45576c; font-size: .82rem; }
+      .check-mark { display: grid; width: 20px; height: 20px; flex: 0 0 auto; place-items: center; border-radius: 50%; background: var(--green-soft); color: var(--green); font-size: .73rem; font-weight: 900; }
+      .check-pending { background: var(--yellow-soft); color: var(--orange); }
+
+      .modal-backdrop {
+        position: fixed;
+        z-index: 10;
+        inset: 0;
+        display: none;
+        place-items: center;
+        padding: 20px;
+        background: rgba(6, 22, 37, .55);
+      }
+      .modal-backdrop.open { display: grid; }
+      .modal {
+        width: min(100%, 490px);
+        border-radius: 18px;
+        background: #ffffff;
+        box-shadow: 0 28px 60px rgba(0,0,0,.25);
+      }
+      .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px; border-bottom: 1px solid #e4ebf1; }
+      .modal-header p { margin: 4px 0 0; color: var(--muted); font-size: .8rem; }
+      .close-button { display: grid; width: 34px; height: 34px; place-items: center; border: 0; border-radius: 8px; background: #eef3f8; color: #486078; font-size: 1.15rem; }
+      .modal form { padding: 20px; }
+      .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+      .form-grid .wide { grid-column: 1 / -1; }
+      .form-help { margin: 16px 0 0; color: #728196; font-size: .75rem; }
+      .modal-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 20px; }
+
+      .toast {
+        position: fixed;
+        z-index: 30;
+        right: 20px;
+        bottom: 20px;
+        max-width: min(400px, calc(100vw - 40px));
+        padding: 13px 15px;
+        border-radius: 11px;
+        background: #132c44;
+        box-shadow: 0 14px 34px rgba(8, 28, 45, .28);
+        color: #ffffff;
+        font-size: .85rem;
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(13px);
+        transition: opacity .22s ease, transform .22s ease;
+      }
+      .toast.visible { opacity: 1; transform: translateY(0); }
+
+      @media (max-width: 1050px) {
+        .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .work-grid { grid-template-columns: 1fr; }
+        .side-stack { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .side-stack .card:last-child { grid-column: 1 / -1; }
+      }
+
+      @media (max-width: 760px) {
+        .app-shell { grid-template-columns: 1fr; }
+        .sidebar { min-height: auto; padding: 15px 16px 12px; }
+        .brand { margin: 0 0 15px; }
+        .nav-title, .side-footer { display: none; }
+        .nav-list { display: flex; overflow-x: auto; padding-bottom: 3px; }
+        .nav-button { width: auto; min-width: max-content; padding: 9px 11px; }
+        .main { padding: 21px 16px 34px; }
+        .topbar { flex-direction: column; }
+        .header-actions { width: 100%; }
+        .header-actions .button { flex: 1; }
+        .project-configuration, .form-grid, .side-stack { grid-template-columns: 1fr; }
+        .form-grid .wide, .side-stack .card:last-child { grid-column: auto; }
+      }
+
+      @media (max-width: 460px) {
+        .metrics { grid-template-columns: 1fr 1fr; }
+        .metric { min-height: 94px; padding: 13px; }
+        .metric .value { font-size: 1.28rem; }
+        .card-header, .card-body, .board-body { padding-left: 14px; padding-right: 14px; }
+        .header-actions { flex-direction: column; }
+        .header-actions .button { width: 100%; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">ϟ</div>
+          <div>
+            <strong>PROJETO ELÉTRICO</strong>
+            <span>Assistente residencial</span>
+          </div>
+        </div>
+
+        <p class="nav-title">Projeto atual</p>
+        <nav class="nav-list" aria-label="Navegação do projeto">
+          <button class="nav-button active" type="button"><span class="nav-icon">⌂</span>Visão geral</button>
+          <button class="nav-button" type="button" data-message="A tela de ambientes será a próxima etapa do produto."><span class="nav-icon">⌑</span>Ambientes</button>
+          <button class="nav-button" type="button" data-message="Você já está trabalhando nos circuitos deste projeto."><span class="nav-icon">≋</span>Circuitos</button>
+          <button class="nav-button" type="button" data-message="O quadro é atualizado conforme os circuitos são alterados."><span class="nav-icon">▦</span>Quadro</button>
+          <button class="nav-button" type="button" data-message="A lista de materiais é preliminar nesta primeira versão."><span class="nav-icon">☷</span>Materiais</button>
+          <button class="nav-button" type="button" data-message="O relatório técnico será liberado depois da validação das regras do motor."><span class="nav-icon">▤</span>Relatório</button>
+        </nav>
+
+        <div class="side-footer">
+          <strong>Base de regras v0.1</strong><br>
+          Anteprojeto revisável · Brasil
+        </div>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Anteprojeto residencial</p>
+            <h1 id="project-title">Casa Modelo · 127/220 V</h1>
+            <p class="project-subtitle">Organize as decisões primeiro; valide as regras técnicas antes da execução.</p>
+          </div>
+          <div class="header-actions">
+            <button class="button button-secondary" id="balance-button" type="button">◒ Equilibrar fases</button>
+            <button class="button button-primary" id="add-circuit-button" type="button">＋ Adicionar circuito</button>
+          </div>
+        </header>
+
+        <section class="notice" aria-label="Aviso técnico">
+          <span class="notice-icon" aria-hidden="true">!</span>
+          <div><strong>Protótipo técnico em evolução.</strong> Os resultados mostrados são de pré-dimensionamento para organizar o projeto. A seleção final de condutores, proteções e critérios normativos exige conferência por profissional habilitado.</div>
+        </section>
+
+        <section class="metrics" aria-label="Resumo do projeto">
+          <article class="metric emphasis">
+            <div class="label">Potência instalada</div>
+            <div class="value" id="total-power">—</div>
+            <div class="detail">soma dos circuitos lançados</div>
+          </article>
+          <article class="metric">
+            <div class="label">Circuitos</div>
+            <div class="value" id="circuit-count">—</div>
+            <div class="detail"><span id="single-count">—</span> em 127 V</div>
+          </article>
+          <article class="metric">
+            <div class="label">Maior circuito</div>
+            <div class="value" id="largest-circuit">—</div>
+            <div class="detail" id="largest-detail">—</div>
+          </article>
+          <article class="metric">
+            <div class="label">Estado do quadro</div>
+            <div class="value" id="balance-word">—</div>
+            <div class="detail" id="balance-detail">aguardando leitura</div>
+          </article>
+        </section>
+
+        <div class="work-grid">
+          <section class="stack">
+            <article class="card">
+              <div class="card-header">
+                <div>
+                  <h2>Dados do projeto</h2>
+                  <p>Informações que orientam a montagem do anteprojeto.</p>
+                </div>
+                <span class="status-pill" style="background:#e6f7f1;color:#188868">rascunho</span>
+              </div>
+              <div class="card-body">
+                <div class="project-configuration">
+                  <div class="field">
+                    <label for="project-name">Nome do projeto</label>
+                    <input id="project-name" value="Casa Modelo" autocomplete="off">
+                  </div>
+                  <div class="field">
+                    <label for="supply-type">Alimentação</label>
+                    <select id="supply-type">
+                      <option>127/220 V · trifásica</option>
+                      <option>127/220 V · bifásica</option>
+                      <option>220/380 V · trifásica</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="board-size">Espaço do quadro</label>
+                    <select id="board-size">
+                      <option>24 módulos DIN</option>
+                      <option>36 módulos DIN</option>
+                      <option>48 módulos DIN</option>
+                      <option>64 módulos DIN</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </article>
+
+            <article class="card">
+              <div class="card-header">
+                <div>
+                  <h2>Circuitos</h2>
+                  <p>O sistema separa cargas 127 V e 220 V para montar uma visão inicial do quadro.</p>
+                </div>
+                <button class="button button-secondary button-compact" type="button" id="add-circuit-secondary">＋ Novo</button>
+              </div>
+              <div class="table-wrap">
+                <table aria-label="Circuitos do projeto">
+                  <thead>
+                    <tr>
+                      <th>Circuito</th>
+                      <th>Potência</th>
+                      <th>Tensão</th>
+                      <th>Fase</th>
+                      <th>Pré-dimensão</th>
+                    </tr>
+                  </thead>
+                  <tbody id="circuits-body"></tbody>
+                </table>
+              </div>
+            </article>
+
+            <article class="card">
+              <div class="card-header">
+                <div>
+                  <h2>Quadro em tempo real</h2>
+                  <p>Representação inicial para enxergar ocupação, fases e disjuntores.</p>
+                </div>
+                <span id="board-capacity" class="technical-line">—</span>
+              </div>
+              <div class="board-body">
+                <p class="board-caption">A disposição é visual e preliminar. A organização física final deve respeitar o projeto executivo, os componentes escolhidos e a montagem segura.</p>
+                <div class="board">
+                  <div class="board-top"><span>QDG — distribuição</span><span id="board-modules">—</span></div>
+                  <div class="board-rail" id="board-rail" aria-label="Representação do trilho DIN"></div>
+                  <div class="board-legend">
+                    <span><i class="legend-dot" style="background:#52c2fa"></i>Fase A</span>
+                    <span><i class="legend-dot" style="background:#df9ee0"></i>Fase B</span>
+                    <span><i class="legend-dot" style="background:#c7d65d"></i>Fase C</span>
+                    <span><i class="legend-dot" style="background:#f2b541"></i>Disjuntor bipolar</span>
+                  </div>
+                </div>
+              </div>
+            </article>
+          </section>
+
+          <aside class="stack side-stack">
+            <article class="card balance-card">
+              <div class="card-header">
+                <div>
+                  <h2>Equilíbrio de fases</h2>
+                  <p>Corrente estimada por fase.</p>
+                </div>
+                <button class="button button-secondary button-compact" type="button" id="balance-secondary">Ajustar</button>
+              </div>
+              <div class="card-body">
+                <div class="balance-list">
+                  <div class="phase-row"><span class="phase-label">A</span><div class="phase-meter"><div class="phase-fill phase-a-fill" id="phase-a-bar"></div></div><span class="phase-number" id="phase-a-number">—</span></div>
+                  <div class="phase-row"><span class="phase-label">B</span><div class="phase-meter"><div class="phase-fill phase-b-fill" id="phase-b-bar"></div></div><span class="phase-number" id="phase-b-number">—</span></div>
+                  <div class="phase-row"><span class="phase-label">C</span><div class="phase-meter"><div class="phase-fill phase-c-fill" id="phase-c-bar"></div></div><span class="phase-number" id="phase-c-number">—</span></div>
+                </div>
+                <div class="balance-result">
+                  <div><span>Diferença entre maior e menor</span><strong id="imbalance-number">—</strong></div>
+                  <span class="status-pill" id="balance-status">avaliando</span>
+                </div>
+                <p class="balance-footnote">O ajuste automático move somente circuitos monofásicos livres. Cargas bipolares permanecem na combinação indicada.</p>
+              </div>
+            </article>
+
+            <article class="card">
+              <div class="card-header">
+                <div>
+                  <h2>Materiais iniciais</h2>
+                  <p>Base para conferência e orçamento.</p>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="materials-list" id="materials-list"></div>
+                <p class="material-note">Não inclui metragem de cabos, eletrodutos ou itens de entrada. Esses dados entram quando houver planta e trajetos.</p>
+              </div>
+            </article>
+
+            <article class="card">
+              <div class="card-header">
+                <div>
+                  <h2>Checklist técnico</h2>
+                  <p>Primeiras verificações do fluxo.</p>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="checklist">
+                  <div class="check"><span class="check-mark">✓</span><span>Circuitos de iluminação e tomadas foram separados.</span></div>
+                  <div class="check"><span class="check-mark">✓</span><span>Fases estão visíveis para revisão do quadro.</span></div>
+                  <div class="check"><span class="check-mark check-pending">!</span><span>Falta informar distâncias para análise de queda de tensão.</span></div>
+                  <div class="check"><span class="check-mark check-pending">!</span><span>Falta validar características da instalação e proteções.</span></div>
+                </div>
+              </div>
+            </article>
+          </aside>
+        </div>
+      </main>
+    </div>
+
+    <div class="modal-backdrop" id="circuit-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div class="modal">
+        <div class="modal-header">
+          <div>
+            <h2 id="modal-title">Adicionar circuito</h2>
+            <p>Inclua uma carga para testar o fluxo do anteprojeto.</p>
+          </div>
+          <button class="close-button" type="button" id="close-modal" aria-label="Fechar">×</button>
+        </div>
+        <form id="circuit-form">
+          <div class="form-grid">
+            <div class="field wide">
+              <label for="circuit-label">Nome do circuito</label>
+              <input id="circuit-label" required placeholder="Ex.: TUG escritório">
+            </div>
+            <div class="field">
+              <label for="circuit-category">Categoria</label>
+              <select id="circuit-category">
+                <option>Iluminação</option>
+                <option>Tomadas de uso geral</option>
+                <option>Tomada de uso específico</option>
+                <option>Chuveiro</option>
+                <option>Ar-condicionado</option>
+                <option>Outra carga</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="circuit-voltage">Tensão</label>
+              <select id="circuit-voltage">
+                <option value="127">127 V</option>
+                <option value="220">220 V</option>
+              </select>
+            </div>
+            <div class="field wide">
+              <label for="circuit-power">Potência prevista (W)</label>
+              <input id="circuit-power" type="number" min="1" required placeholder="Ex.: 1200">
+            </div>
+          </div>
+          <p class="form-help">O protótipo estimará corrente e mostrará uma pré-dimensão ilustrativa. A conferência técnica continua obrigatória.</p>
+          <div class="modal-actions">
+            <button class="button button-secondary" type="button" id="cancel-modal">Cancelar</button>
+            <button class="button button-primary" type="submit">Adicionar ao projeto</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <script>
+      (function () {
+        var circuits = [
+          { id: 1, name: 'Iluminação social', category: 'Iluminação', voltage: 127, power: 720, phase: 'A' },
+          { id: 2, name: 'TUG quartos', category: 'Tomadas de uso geral', voltage: 127, power: 1200, phase: 'B' },
+          { id: 3, name: 'TUG sala', category: 'Tomadas de uso geral', voltage: 127, power: 1000, phase: 'C' },
+          { id: 4, name: 'Cozinha', category: 'Tomada de uso específico', voltage: 220, power: 3500, phase: 'AB' },
+          { id: 5, name: 'Chuveiro', category: 'Chuveiro', voltage: 220, power: 6800, phase: 'BC' },
+          { id: 6, name: 'Lavanderia', category: 'Tomada de uso específico', voltage: 127, power: 1500, phase: 'A' }
+        ];
+
+        var toastTimer = null;
+        var elements = {
+          body: document.getElementById('circuits-body'),
+          totalPower: document.getElementById('total-power'),
+          circuitCount: document.getElementById('circuit-count'),
+          singleCount: document.getElementById('single-count'),
+          largestCircuit: document.getElementById('largest-circuit'),
+          largestDetail: document.getElementById('largest-detail'),
+          balanceWord: document.getElementById('balance-word'),
+          balanceDetail: document.getElementById('balance-detail'),
+          phaseABar: document.getElementById('phase-a-bar'),
+          phaseBBar: document.getElementById('phase-b-bar'),
+          phaseCBar: document.getElementById('phase-c-bar'),
+          phaseANumber: document.getElementById('phase-a-number'),
+          phaseBNumber: document.getElementById('phase-b-number'),
+          phaseCNumber: document.getElementById('phase-c-number'),
+          imbalance: document.getElementById('imbalance-number'),
+          balanceStatus: document.getElementById('balance-status'),
+          boardRail: document.getElementById('board-rail'),
+          boardModules: document.getElementById('board-modules'),
+          boardCapacity: document.getElementById('board-capacity'),
+          materials: document.getElementById('materials-list'),
+          modal: document.getElementById('circuit-modal'),
+          toast: document.getElementById('toast'),
+          form: document.getElementById('circuit-form'),
+          projectName: document.getElementById('project-name'),
+          projectTitle: document.getElementById('project-title')
+        };
+
+        function formatPower(value) {
+          if (value >= 1000) return (value / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' kW';
+          return value.toLocaleString('pt-BR') + ' W';
+        }
+
+        function currentOf(circuit) {
+          return circuit.power / circuit.voltage;
+        }
+
+        function preDimension(circuit) {
+          var current = currentOf(circuit);
+          if (current <= 10) return { cable: '1,5 mm²', breaker: '10 A' };
+          if (current <= 16) return { cable: '2,5 mm²', breaker: '16 A' };
+          if (current <= 25) return { cable: '4 mm²', breaker: '25 A' };
+          if (current <= 32) return { cable: '6 mm²', breaker: '32 A' };
+          if (current <= 40) return { cable: '10 mm²', breaker: '40 A' };
+          return { cable: 'revisar', breaker: 'revisar' };
+        }
+
+        function phaseClass(phase) {
+          if (phase === 'A') return 'phase-a';
+          if (phase === 'B') return 'phase-b';
+          if (phase === 'C') return 'phase-c';
+          return 'phase-2p';
+        }
+
+        function phaseLoads() {
+          var loads = { A: 0, B: 0, C: 0 };
+          circuits.forEach(function (circuit) {
+            var current = currentOf(circuit);
+            if (circuit.phase.indexOf('A') !== -1) loads.A += current;
+            if (circuit.phase.indexOf('B') !== -1) loads.B += current;
+            if (circuit.phase.indexOf('C') !== -1) loads.C += current;
+          });
+          return loads;
+        }
+
+        function statusFor(diff) {
+          if (diff <= 3) return { word: 'Bom', label: 'bem distribuído', tone: '#153f4e', text: '#a4f2d8' };
+          if (diff <= 8) return { word: 'Atenção', label: 'revisar distribuição', tone: '#553d18', text: '#ffe4a3' };
+          return { word: 'Revisar', label: 'desequilíbrio relevante', tone: '#542635', text: '#ffbec8' };
+        }
+
+        function renderCircuits() {
+          elements.body.innerHTML = circuits.map(function (circuit) {
+            var pre = preDimension(circuit);
+            return '<tr>' +
+              '<td><span class="circuit-name">' + circuit.name + '</span><span class="circuit-meta">' + circuit.category + '</span></td>' +
+              '<td>' + formatPower(circuit.power) + '</td>' +
+              '<td>' + circuit.voltage + ' V</td>' +
+              '<td><span class="phase-badge ' + phaseClass(circuit.phase) + '">' + circuit.phase + '</span></td>' +
+              '<td><span class="technical-line">' + pre.cable + ' · ' + pre.breaker + '</span></td>' +
+              '</tr>';
+          }).join('');
+        }
+
+        function renderMetrics() {
+          var total = circuits.reduce(function (sum, circuit) { return sum + circuit.power; }, 0);
+          var singles = circuits.filter(function (circuit) { return circuit.voltage === 127; });
+          var largest = circuits.reduce(function (current, circuit) { return circuit.power > current.power ? circuit : current; }, circuits[0]);
+          var loads = phaseLoads();
+          var values = [loads.A, loads.B, loads.C];
+          var diff = Math.max.apply(null, values) - Math.min.apply(null, values);
+          var status = statusFor(diff);
+
+          elements.totalPower.textContent = formatPower(total);
+          elements.circuitCount.textContent = String(circuits.length);
+          elements.singleCount.textContent = String(singles.length);
+          elements.largestCircuit.textContent = formatPower(largest.power);
+          elements.largestDetail.textContent = largest.name + ' · ' + largest.voltage + ' V';
+          elements.balanceWord.textContent = status.word;
+          elements.balanceDetail.textContent = status.label;
+        }
+
+        function renderBalance() {
+          var loads = phaseLoads();
+          var max = Math.max(loads.A, loads.B, loads.C, 1);
+          var diff = Math.max(loads.A, loads.B, loads.C) - Math.min(loads.A, loads.B, loads.C);
+          var status = statusFor(diff);
+
+          elements.phaseABar.style.width = (loads.A / max * 100).toFixed(0) + '%';
+          elements.phaseBBar.style.width = (loads.B / max * 100).toFixed(0) + '%';
+          elements.phaseCBar.style.width = (loads.C / max * 100).toFixed(0) + '%';
+          elements.phaseANumber.textContent = loads.A.toFixed(1).replace('.', ',') + ' A';
+          elements.phaseBNumber.textContent = loads.B.toFixed(1).replace('.', ',') + ' A';
+          elements.phaseCNumber.textContent = loads.C.toFixed(1).replace('.', ',') + ' A';
+          elements.imbalance.textContent = diff.toFixed(1).replace('.', ',') + ' A';
+          elements.balanceStatus.textContent = status.label;
+          elements.balanceStatus.style.background = status.tone;
+          elements.balanceStatus.style.color = status.text;
+        }
+
+        function renderBoard() {
+          var modules = 24;
+          var used = circuits.reduce(function (sum, circuit) { return sum + (circuit.voltage === 220 ? 2 : 1); }, 0);
+          var breakerHtml = circuits.map(function (circuit) {
+            var pre = preDimension(circuit);
+            var two = circuit.voltage === 220 ? ' two-pole' : '';
+            return '<div class="breaker' + two + '" title="' + circuit.name + '">' +
+              '<span class="breaker-phase">' + circuit.phase + ' · ' + circuit.voltage + ' V</span>' +
+              '<span class="breaker-name">' + circuit.name + '</span>' +
+              '<span class="breaker-rating">' + pre.breaker + '</span>' +
+              '</div>';
+          }).join('');
+          var empty = Math.max(0, Math.min(4, modules - used));
+          for (var i = 0; i < empty; i += 1) {
+            breakerHtml += '<div class="breaker din-empty"><span class="breaker-phase">DIN</span><span class="breaker-name">Reserva</span><span class="breaker-rating">—</span></div>';
+          }
+          elements.boardRail.innerHTML = breakerHtml;
+          elements.boardModules.textContent = used + ' de ' + modules + ' módulos usados';
+          elements.boardCapacity.textContent = (modules - used) + ' módulos livres';
+        }
+
+        function renderMaterials() {
+          var mono = circuits.filter(function (circuit) { return circuit.voltage === 127; }).length;
+          var bi = circuits.filter(function (circuit) { return circuit.voltage === 220; }).length;
+          var rows = [
+            ['Disjuntores monopolares', mono + ' un.'],
+            ['Disjuntores bipolares', bi + ' un.'],
+            ['Módulos DIN ocupados', circuits.reduce(function (sum, circuit) { return sum + (circuit.voltage === 220 ? 2 : 1); }, 0) + ' un.'],
+            ['Etiquetas de circuito', circuits.length + ' un.'],
+            ['Quadro de distribuição', '1 un.']
+          ];
+          elements.materials.innerHTML = rows.map(function (row) {
+            return '<div class="material-row"><span>' + row[0] + '</span><span class="qty">' + row[1] + '</span></div>';
+          }).join('');
+        }
+
+        function render() {
+          renderCircuits();
+          renderMetrics();
+          renderBalance();
+          renderBoard();
+          renderMaterials();
+        }
+
+        function toast(message) {
+          window.clearTimeout(toastTimer);
+          elements.toast.textContent = message;
+          elements.toast.classList.add('visible');
+          toastTimer = window.setTimeout(function () { elements.toast.classList.remove('visible'); }, 3100);
+        }
+
+        function openModal() {
+          elements.modal.classList.add('open');
+          window.setTimeout(function () { document.getElementById('circuit-label').focus(); }, 60);
+        }
+
+        function closeModal() {
+          elements.modal.classList.remove('open');
+          elements.form.reset();
+        }
+
+        function automaticBalance() {
+          var freeCircuits = circuits.filter(function (circuit) { return circuit.voltage === 127; }).sort(function (a, b) { return b.power - a.power; });
+          var loads = { A: 0, B: 0, C: 0 };
+          circuits.filter(function (circuit) { return circuit.voltage === 220; }).forEach(function (circuit) {
+            var current = currentOf(circuit);
+            if (circuit.phase.indexOf('A') !== -1) loads.A += current;
+            if (circuit.phase.indexOf('B') !== -1) loads.B += current;
+            if (circuit.phase.indexOf('C') !== -1) loads.C += current;
+          });
+          freeCircuits.forEach(function (circuit) {
+            var ordered = ['A', 'B', 'C'].sort(function (first, second) { return loads[first] - loads[second]; });
+            circuit.phase = ordered[0];
+            loads[circuit.phase] += currentOf(circuit);
+          });
+          render();
+          toast('Fases redistribuídas: confira a lógica e as condições reais da instalação.');
+        }
+
+        document.getElementById('add-circuit-button').addEventListener('click', openModal);
+        document.getElementById('add-circuit-secondary').addEventListener('click', openModal);
+        document.getElementById('close-modal').addEventListener('click', closeModal);
+        document.getElementById('cancel-modal').addEventListener('click', closeModal);
+        document.getElementById('balance-button').addEventListener('click', automaticBalance);
+        document.getElementById('balance-secondary').addEventListener('click', automaticBalance);
+        elements.modal.addEventListener('click', function (event) {
+          if (event.target === elements.modal) closeModal();
+        });
+
+        document.addEventListener('keydown', function (event) {
+          if (event.key === 'Escape') closeModal();
+        });
+
+        elements.form.addEventListener('submit', function (event) {
+          event.preventDefault();
+          var voltage = Number(document.getElementById('circuit-voltage').value);
+          var loads = phaseLoads();
+          var phase = voltage === 220 ? 'AB' : ['A', 'B', 'C'].sort(function (a, b) { return loads[a] - loads[b]; })[0];
+          circuits.push({
+            id: Date.now(),
+            name: document.getElementById('circuit-label').value.trim(),
+            category: document.getElementById('circuit-category').value,
+            voltage: voltage,
+            power: Number(document.getElementById('circuit-power').value),
+            phase: phase
+          });
+          closeModal();
+          render();
+          toast('Circuito incluído em ' + phase + '. Revise os critérios técnicos antes de executar.');
+        });
+
+        elements.projectName.addEventListener('input', function () {
+          var name = elements.projectName.value.trim() || 'Projeto sem nome';
+          elements.projectTitle.textContent = name + ' · 127/220 V';
+        });
+
+        document.querySelectorAll('.nav-button[data-message]').forEach(function (button) {
+          button.addEventListener('click', function () {
+            document.querySelectorAll('.nav-button').forEach(function (item) { item.classList.remove('active'); });
+            button.classList.add('active');
+            toast(button.getAttribute('data-message'));
+          });
+        });
+
+        render();
+      }());
+    </script>
+  </body>
+</html>
