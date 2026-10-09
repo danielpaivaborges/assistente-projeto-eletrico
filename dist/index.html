@@ -319,6 +319,108 @@
       .hero-float span { color: #8bcbea; font-size: .65rem; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
       .hero-float strong { color: #ffffff; font-size: .78rem; }
 
+      .project-journey {
+        position: relative;
+        display: grid;
+        grid-template-columns: minmax(0, 1.35fr) minmax(255px, .65fr);
+        gap: 20px;
+        overflow: hidden;
+        margin: 0 0 22px;
+        padding: 21px 22px 18px;
+        border: 1px solid #bddbec;
+        border-radius: 20px;
+        background:
+          radial-gradient(circle at 92% 8%, rgba(69, 183, 236, .18), transparent 29%),
+          linear-gradient(123deg, #f9fdff 0%, #edf8ff 56%, #fafdff 100%);
+        box-shadow: 0 12px 28px rgba(36, 88, 125, .075);
+      }
+      .project-journey::before {
+        position: absolute;
+        top: -44px;
+        right: 31%;
+        width: 164px;
+        height: 164px;
+        content: '';
+        border: 1px solid rgba(53, 158, 215, .15);
+        border-radius: 50%;
+        box-shadow: 0 0 0 20px rgba(53, 158, 215, .035), 0 0 0 44px rgba(53, 158, 215, .025);
+        pointer-events: none;
+      }
+      .journey-summary, .journey-action-panel, .journey-stages { position: relative; z-index: 1; }
+      .journey-kicker {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        margin: 0 0 6px;
+        color: #1677ad;
+        font-size: .7rem;
+        font-weight: 850;
+        letter-spacing: .1em;
+        text-transform: uppercase;
+      }
+      .journey-kicker::before { width: 19px; height: 2px; content: ''; background: var(--yellow); }
+      .project-journey h2 { max-width: 650px; margin: 0; color: #183951; font-size: clamp(1.05rem, 1.8vw, 1.38rem); letter-spacing: -.025em; line-height: 1.17; }
+      .journey-description { max-width: 670px; margin: 7px 0 14px; color: #60778c; font-size: .81rem; line-height: 1.48; }
+      .journey-progress-bar { height: 8px; overflow: hidden; border-radius: 999px; background: #d9eaf4; box-shadow: inset 0 1px 2px rgba(35, 78, 108, .09); }
+      .journey-progress-fill { display: block; width: 0; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #1689db, #46b6e9); box-shadow: 0 0 11px rgba(22, 137, 219, .35); transition: width .38s ease; }
+      .journey-progress { margin: 7px 0 0; color: #4d708a; font-size: .72rem; font-weight: 800; }
+      .journey-action-panel {
+        display: grid;
+        align-content: center;
+        justify-items: start;
+        min-height: 117px;
+        padding: 16px;
+        border: 1px solid rgba(105, 176, 218, .35);
+        border-radius: 15px;
+        background: linear-gradient(145deg, rgba(255,255,255,.96), rgba(237,247,253,.86));
+        box-shadow: 0 8px 18px rgba(32, 90, 124, .08);
+      }
+      .journey-action-panel > span { color: #60829b; font-size: .65rem; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
+      .journey-action-panel strong { margin: 3px 0 11px; color: #23455f; font-size: .88rem; line-height: 1.23; }
+      .journey-action-panel .button { min-height: 36px; padding: 7px 11px; font-size: .78rem; }
+      .journey-stages {
+        display: grid;
+        grid-column: 1 / -1;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 8px;
+        margin: 0;
+        padding: 3px 0 0;
+        list-style: none;
+      }
+      .journey-stage {
+        display: flex;
+        min-width: 0;
+        align-items: center;
+        gap: 8px;
+        padding: 9px 8px;
+        border: 1px solid rgba(191, 215, 230, .8);
+        border-radius: 10px;
+        background: rgba(255,255,255,.62);
+        color: #7790a3;
+      }
+      .journey-stage-marker {
+        display: grid;
+        width: 23px;
+        height: 23px;
+        flex: 0 0 auto;
+        place-items: center;
+        border: 1px solid #c5d9e7;
+        border-radius: 50%;
+        background: #f6fbfe;
+        color: #668399;
+        font-size: .69rem;
+        font-weight: 900;
+      }
+      .journey-stage strong, .journey-stage small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .journey-stage strong { color: #516f85; font-size: .73rem; }
+      .journey-stage small { margin-top: 1px; color: #91a6b5; font-size: .62rem; }
+      .journey-stage.is-complete { border-color: #a9dccc; background: #f4fcf9; }
+      .journey-stage.is-complete .journey-stage-marker { border-color: #80c7b0; background: var(--green); color: #ffffff; }
+      .journey-stage.is-complete strong { color: #27715c; }
+      .journey-stage.is-current { border-color: #7bbfe5; background: #ffffff; box-shadow: 0 5px 12px rgba(37, 125, 177, .1); }
+      .journey-stage.is-current .journey-stage-marker { border-color: var(--blue); background: var(--blue-soft); color: var(--blue-dark); }
+      .journey-stage.is-current strong { color: #17608f; }
+
       .metrics {
         display: grid;
         grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -641,6 +743,7 @@
         .side-stack { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
         .side-stack .card:last-child { grid-column: 1 / -1; }
         .visual-reference-card { grid-column: 1 / -1; }
+        .journey-stages { grid-template-columns: repeat(5, minmax(112px, 1fr)); overflow-x: auto; padding-bottom: 3px; }
       }
 
       @media (max-width: 760px) {
@@ -665,6 +768,9 @@
         .visual-hero-art { min-height: 205px; margin: -8px 0 0; }
         .hero-device-image { max-height: 240px; transform: translateX(0) rotate(-1deg); }
         .hero-float { right: 4%; bottom: 2px; }
+        .project-journey { grid-template-columns: 1fr; gap: 15px; padding: 19px 18px 16px; }
+        .journey-action-panel { min-height: 0; }
+        .journey-stages { grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: visible; padding-bottom: 0; }
       }
 
       @media (max-width: 460px) {
@@ -682,12 +788,14 @@
         .visual-hero-signals { gap: 7px; margin-top: 18px; }
         .visual-hero-signal { min-width: 102px; padding: 8px 9px; }
         .hero-float { display: none; }
+        .journey-stages { grid-template-columns: 1fr; }
+        .journey-stage { padding: 8px; }
       }
 
       @media print {
         @page { margin: 12mm; }
         body { min-width: 0; background: #ffffff; color: #172235; font-size: 11px; }
-        .sidebar, .header-actions, .button, .row-actions, .project-save-actions, .modal-backdrop, .toast, .visual-hero, .visual-reference-card { display: none !important; }
+        .sidebar, .header-actions, .button, .row-actions, .project-save-actions, .modal-backdrop, .toast, .visual-hero, .project-journey, .visual-reference-card { display: none !important; }
         .app-shell, .work-grid { display: block; min-height: 0; }
         .main { padding: 0; }
         .topbar { display: block; margin-bottom: 10px; }
@@ -731,7 +839,7 @@
         </nav>
 
         <div class="side-footer">
-          <strong>Produto v0.10</strong><br>
+          <strong>Produto v0.11</strong><br>
           Anteprojeto revisável · Brasil
         </div>
       </aside>
@@ -771,6 +879,24 @@
             <img class="hero-device-image" src="assets/quadro-eletrico-hero.webp" width="1024" height="683" alt="Ilustração realista de um quadro de distribuição residencial aberto" decoding="async">
             <div class="hero-float"><span>Fluxo do projeto</span><strong>Pontos → circuitos → quadro</strong></div>
           </div>
+        </section>
+
+        <section class="project-journey" aria-labelledby="journey-title">
+          <div class="journey-summary">
+            <p class="journey-kicker">Jornada do projeto</p>
+            <h2 id="journey-title">Organizando o anteprojeto</h2>
+            <p class="journey-description" id="journey-description">—</p>
+            <div class="journey-progress-bar" id="journey-progress-bar" role="progressbar" aria-label="Etapas concluídas do anteprojeto" aria-valuemin="0" aria-valuemax="5" aria-valuenow="0">
+              <span class="journey-progress-fill" id="journey-progress-fill"></span>
+            </div>
+            <p class="journey-progress" id="journey-progress">—</p>
+          </div>
+          <div class="journey-action-panel">
+            <span>Próxima ação</span>
+            <strong id="journey-action-title">—</strong>
+            <button class="button button-primary" id="journey-action" type="button">Continuar</button>
+          </div>
+          <ol class="journey-stages" id="journey-steps" aria-label="Etapas do anteprojeto"></ol>
         </section>
 
         <section class="metrics" aria-label="Resumo do projeto">
@@ -929,7 +1055,7 @@
               </div>
             </article>
 
-            <article class="card">
+            <article class="card" id="review-card">
               <div class="card-header">
                 <div>
                   <h2>Revisão do anteprojeto</h2>

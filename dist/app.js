@@ -57,6 +57,7 @@
   var editingCircuitId = null;
   var editingRoomId = null;
   var editingPointId = null;
+  var activeJourneyAction = '';
 
   var toastTimer = null;
   var elements = {
@@ -135,6 +136,14 @@
     pointPower: document.getElementById('point-power'),
     projectName: document.getElementById('project-name'),
     projectTitle: document.getElementById('project-title'),
+    journeyTitle: document.getElementById('journey-title'),
+    journeyDescription: document.getElementById('journey-description'),
+    journeyProgress: document.getElementById('journey-progress'),
+    journeyProgressBar: document.getElementById('journey-progress-bar'),
+    journeyProgressFill: document.getElementById('journey-progress-fill'),
+    journeySteps: document.getElementById('journey-steps'),
+    journeyActionTitle: document.getElementById('journey-action-title'),
+    journeyAction: document.getElementById('journey-action'),
     printReportMeta: document.getElementById('print-report-meta'),
     supplyType: document.getElementById('supply-type'),
     boardSize: document.getElementById('board-size'),
@@ -473,6 +482,115 @@
     elements.printReportMeta.textContent = 'Alimentação: ' + currentSupply().label + ' · Quadro: ' + elements.boardSize.value;
   }
 
+  function getProjectJourney() {
+    var traceability = pointCircuitTraceability();
+    var installation = engine.summarizeInstallationReadiness(circuits);
+    var unlinkedPoints = traceability.totals.unlinkedPointCount;
+    var duplicateLinks = traceability.totals.duplicatePointCount;
+    var invalidInstallation = installation.totals.invalidCount;
+    var stages = [
+      { label: 'Ambientes', detail: 'estrutura do imóvel', complete: rooms.length > 0 },
+      { label: 'Pontos', detail: 'cargas previstas', complete: points.length > 0 },
+      { label: 'Circuitos', detail: 'organização inicial', complete: circuits.length > 0 },
+      { label: 'Vínculos', detail: 'pontos em circuitos', complete: points.length > 0 && unlinkedPoints === 0 && duplicateLinks === 0 },
+      { label: 'Trajetos', detail: 'dados de instalação', complete: circuits.length > 0 && installation.totals.readyCount === installation.totals.circuitCount && invalidInstallation === 0 }
+    ];
+    var completeCount = stages.filter(function (stage) { return stage.complete; }).length;
+    var currentStageIndex = stages.length - 1;
+    var action = 'review';
+    var actionLabel = 'Abrir conferência';
+    var actionTitle = 'Faça a conferência do anteprojeto';
+    var title = 'O cadastro está pronto para uma revisão organizada.';
+    var description = 'Use o painel de revisão para conferir rastreabilidade e dados de instalação antes de qualquer decisão técnica.';
+
+    stages.some(function (stage, index) {
+      if (!stage.complete) {
+        currentStageIndex = index;
+        return true;
+      }
+      return false;
+    });
+
+    if (!rooms.length) {
+      action = 'room';
+      actionLabel = 'Adicionar ambiente';
+      actionTitle = 'Comece pela estrutura do imóvel';
+      title = 'Dê forma ao imóvel antes de listar as cargas.';
+      description = 'Cadastre os ambientes para manter pontos, circuitos e conferências ligados ao contexto certo.';
+    } else if (!points.length) {
+      action = 'point';
+      actionLabel = 'Adicionar ponto elétrico';
+      actionTitle = 'Registre a primeira carga prevista';
+      title = 'Os ambientes já estão organizados.';
+      description = 'Agora inclua iluminação, tomadas e cargas específicas para que o projeto reflita o uso de cada ambiente.';
+    } else if (!circuits.length) {
+      action = 'circuit-from-points';
+      actionLabel = 'Montar circuito pelos pontos';
+      actionTitle = 'Agrupe os pontos em um circuito';
+      title = 'As cargas já podem orientar os primeiros circuitos.';
+      description = 'Crie circuitos pelos pontos para preservar potência, tensão e rastreabilidade desde o início.';
+    } else if (duplicateLinks) {
+      action = 'review';
+      actionLabel = 'Abrir revisão';
+      actionTitle = 'Resolva vínculos em conflito';
+      title = 'Há ' + duplicateLinks + (duplicateLinks === 1 ? ' ponto em mais de um circuito.' : ' pontos em mais de um circuito.');
+      description = 'Revise os vínculos antes de avançar: cada ponto deve ter um caminho claro no anteprojeto.';
+    } else if (unlinkedPoints) {
+      action = 'circuit-from-points';
+      actionLabel = 'Organizar ' + unlinkedPoints + (unlinkedPoints === 1 ? ' ponto' : ' pontos');
+      actionTitle = 'Vincule as cargas que ainda estão soltas';
+      title = 'Há ' + unlinkedPoints + (unlinkedPoints === 1 ? ' ponto sem circuito.' : ' pontos sem circuito.');
+      description = 'Agrupe esses pontos em circuitos para que a potência prevista e a rastreabilidade acompanhem o projeto.';
+    } else if (invalidInstallation || installation.totals.readyCount < installation.totals.circuitCount) {
+      action = 'installation';
+      actionLabel = invalidInstallation ? 'Corrigir dados de instalação' : 'Informar condições de instalação';
+      actionTitle = invalidInstallation ? 'Há dados de campo para corrigir' : 'Complete os trajetos de cada circuito';
+      title = invalidInstallation
+        ? invalidInstallation + (invalidInstallation === 1 ? ' circuito tem dados de instalação a corrigir.' : ' circuitos têm dados de instalação a corrigir.')
+        : installation.totals.pendingCount + (installation.totals.pendingCount === 1 ? ' circuito ainda precisa de dados de instalação.' : ' circuitos ainda precisam de dados de instalação.');
+      description = 'Registre método, trajeto e condições de campo. O assistente ainda não dimensiona condutores ou proteções.';
+    }
+
+    return {
+      stages: stages,
+      completeCount: completeCount,
+      currentStageIndex: currentStageIndex,
+      action: action,
+      actionLabel: actionLabel,
+      actionTitle: actionTitle,
+      title: title,
+      description: description
+    };
+  }
+
+  function renderJourney() {
+    var journey = getProjectJourney();
+    var progress = journey.stages.length ? journey.completeCount / journey.stages.length * 100 : 0;
+
+    activeJourneyAction = journey.action;
+    elements.journeyTitle.textContent = journey.title;
+    elements.journeyDescription.textContent = journey.description;
+    elements.journeyProgress.textContent = journey.completeCount + ' de ' + journey.stages.length + ' etapas concluídas';
+    elements.journeyActionTitle.textContent = journey.actionTitle;
+    elements.journeyAction.textContent = journey.actionLabel;
+    elements.journeyProgressFill.style.width = progress.toFixed(0) + '%';
+    if (typeof elements.journeyProgressBar.setAttribute === 'function') {
+      elements.journeyProgressBar.setAttribute('aria-valuenow', String(journey.completeCount));
+      elements.journeyProgressBar.setAttribute('aria-valuetext', journey.completeCount + ' de ' + journey.stages.length + ' etapas concluídas');
+    }
+
+    elements.journeySteps.innerHTML = journey.stages.map(function (stage, index) {
+      var state = stage.complete ? 'Concluída' : index === journey.currentStageIndex ? 'Em foco' : 'A seguir';
+      var classes = 'journey-stage' + (stage.complete ? ' is-complete' : '') + (index === journey.currentStageIndex ? ' is-current' : '');
+      var marker = stage.complete ? '✓' : String(index + 1);
+
+      return '<li class="' + classes + '">' +
+        '<span class="journey-stage-marker" aria-hidden="true">' + marker + '</span>' +
+        '<span><strong>' + escapeHtml(stage.label) + '</strong><small>' + escapeHtml(stage.detail) + ' · ' + state + '</small></span>' +
+        '</li>';
+    }).join('');
+  }
+
   function renderCircuits() {
     var traceability = pointCircuitTraceability();
 
@@ -729,6 +847,7 @@
 
   function render() {
     renderProjectTitle();
+    renderJourney();
     renderInventory();
     renderCircuits();
     renderInstallation();
@@ -996,6 +1115,38 @@
     closeInstallationModal();
   }
 
+  function openJourneyReview() {
+    var reviewCard = document.getElementById('review-card');
+
+    if (reviewCard && typeof reviewCard.scrollIntoView === 'function') {
+      reviewCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  function runJourneyAction(action) {
+    if (action === 'room') {
+      openRoomModal();
+      return;
+    }
+
+    if (action === 'point') {
+      openPointModal();
+      return;
+    }
+
+    if (action === 'circuit-from-points') {
+      openPointCircuitModal();
+      return;
+    }
+
+    if (action === 'installation') {
+      openInstallationModal();
+      return;
+    }
+
+    openJourneyReview();
+  }
+
   function fillVoltageOptions(control) {
     var supported = engine.getSupportedVoltages(currentSupply());
     var selected = Number(control.value);
@@ -1150,6 +1301,9 @@
   document.getElementById('create-circuit-from-points').addEventListener('click', openPointCircuitModal);
   document.getElementById('add-installation-data').addEventListener('click', openInstallationModal);
   document.getElementById('add-point-primary').addEventListener('click', openPointModal);
+  elements.journeyAction.addEventListener('click', function () {
+    runJourneyAction(activeJourneyAction);
+  });
   document.getElementById('close-modal').addEventListener('click', closeCircuitModal);
   document.getElementById('cancel-modal').addEventListener('click', closeCircuitModal);
   document.getElementById('close-point-circuit-modal').addEventListener('click', closePointCircuitModal);

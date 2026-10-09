@@ -10,6 +10,10 @@ const builtHero = path.join(root, 'dist', 'assets', 'quadro-eletrico-hero.webp')
 const builtDevices = path.join(root, 'dist', 'assets', 'dispositivos-residenciais.webp');
 
 assert.match(html, /class="visual-hero"/);
+assert.match(html, /class="project-journey"/);
+assert.match(html, /id="journey-action"/);
+assert.match(html, /id="journey-steps"/);
+assert.match(html, /id="review-card"/);
 assert.match(html, /assets\/quadro-eletrico-hero\.webp/);
 assert.match(html, /assets\/dispositivos-residenciais\.webp/);
 assert.match(html, /class="[^"]*visual-reference-card/);
