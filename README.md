@@ -57,6 +57,10 @@ npm run check
 
 O comando atualiza os arquivos de navegador em `dist/` e executa os testes do motor. Depois, abra `dist/index.html` em um navegador moderno.
 
+## Publicacao online
+
+Todo envio para a branch `main` valida o aplicativo e publica a pasta `dist/` no GitHub Pages. O fluxo tambem pode ser iniciado manualmente na aba **Actions** do repositorio.
+
 ## Documentação técnica
 
 - [Motor técnico](docs/MOTOR_TECNICO.md)
