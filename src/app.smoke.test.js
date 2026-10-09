@@ -66,5 +66,6 @@ assert.equal(getElementById('review-status').textContent, '10 pendências');
 assert.match(getElementById('review-summary').textContent, /5 circuitos manuais/);
 assert.match(getElementById('review-list').innerHTML, /Ponto elétrico/);
 assert.match(getElementById('review-list').innerHTML, /registro manual/);
+assert.equal(getElementById('save-status').textContent, 'salvamento indisponível');
 
 console.log('✔ interface inicializa com ambientes, pontos e circuitos');

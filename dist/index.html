@@ -250,6 +250,7 @@
 
       .card-header p { margin: 3px 0 0; color: var(--muted); font-size: .82rem; }
       .card-body { padding: 18px 19px; }
+      .project-save-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; }
 
       .project-configuration {
         display: grid;
@@ -529,7 +530,7 @@
         </nav>
 
         <div class="side-footer">
-          <strong>Base de regras v0.6</strong><br>
+          <strong>Produto v0.7</strong><br>
           Anteprojeto revisável · Brasil
         </div>
       </aside>
@@ -583,7 +584,10 @@
                   <h2>Dados do projeto</h2>
                   <p>Informações que orientam a montagem do anteprojeto.</p>
                 </div>
-                <span class="status-pill" style="background:#e6f7f1;color:#188868">rascunho</span>
+                <div class="project-save-actions">
+                  <span class="status-pill" id="save-status" style="background:#e6f7f1;color:#188868" aria-live="polite">salvando…</span>
+                  <button class="button button-secondary button-compact" type="button" id="reset-project">↺ Restaurar modelo</button>
+                </div>
               </div>
               <div class="card-body">
                 <div class="project-configuration">

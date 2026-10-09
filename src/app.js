@@ -8,30 +8,50 @@
     return;
   }
 
-  var circuits = [
-    { id: 1, name: 'Iluminação social', category: 'Iluminação', voltage: 127, power: 720, phase: 'A' },
-    { id: 2, name: 'TUG quartos', category: 'Tomadas de uso geral', voltage: 127, power: 1200, phase: 'B' },
-    { id: 3, name: 'TUG sala', category: 'Tomadas de uso geral', voltage: 127, power: 1000, phase: 'C' },
-    { id: 4, name: 'Cozinha', category: 'Tomada de uso específico', voltage: 220, power: 3500, phase: 'AB' },
-    { id: 5, name: 'Chuveiro', category: 'Chuveiro', voltage: 220, power: 6800, phase: 'BC', pointIds: ['chuveiro'], powerSource: 'linked-points' },
-    { id: 6, name: 'Lavanderia', category: 'Tomada de uso específico', voltage: 127, power: 1500, phase: 'A' }
-  ];
+  var PROJECT_STORAGE_KEY = 'assistente-projeto-eletrico:projeto:v1';
+  var PROJECT_STORAGE_VERSION = 1;
+  var DEFAULT_PROJECT = {
+    circuits: [
+      { id: 1, name: 'Iluminação social', category: 'Iluminação', voltage: 127, power: 720, phase: 'A' },
+      { id: 2, name: 'TUG quartos', category: 'Tomadas de uso geral', voltage: 127, power: 1200, phase: 'B' },
+      { id: 3, name: 'TUG sala', category: 'Tomadas de uso geral', voltage: 127, power: 1000, phase: 'C' },
+      { id: 4, name: 'Cozinha', category: 'Tomada de uso específico', voltage: 220, power: 3500, phase: 'AB' },
+      { id: 5, name: 'Chuveiro', category: 'Chuveiro', voltage: 220, power: 6800, phase: 'BC', pointIds: ['chuveiro'], powerSource: 'linked-points' },
+      { id: 6, name: 'Lavanderia', category: 'Tomada de uso específico', voltage: 127, power: 1500, phase: 'A' }
+    ],
+    rooms: [
+      { id: 'sala', name: 'Sala', type: 'Sala' },
+      { id: 'cozinha', name: 'Cozinha', type: 'Cozinha' },
+      { id: 'quarto-1', name: 'Quarto 1', type: 'Quarto' },
+      { id: 'quarto-2', name: 'Quarto 2', type: 'Quarto' },
+      { id: 'banheiro', name: 'Banheiro', type: 'Banheiro' }
+    ],
+    points: [
+      { id: 'luz-sala', roomId: 'sala', type: 'Iluminação', description: 'Luminária central', power: 60, voltage: 127 },
+      { id: 'tv-rack', roomId: 'sala', type: 'Tomada de uso geral', description: 'TV e rack', power: 300, voltage: 127 },
+      { id: 'bancada', roomId: 'cozinha', type: 'Tomada de uso geral', description: 'Bancada de preparo', power: 1200, voltage: 127 },
+      { id: 'luz-quarto-1', roomId: 'quarto-1', type: 'Iluminação', description: 'Luminária central', power: 60, voltage: 127 },
+      { id: 'chuveiro', roomId: 'banheiro', type: 'Chuveiro', description: 'Chuveiro elétrico', power: 6800, voltage: 220 }
+    ],
+    settings: {
+      projectName: 'Casa Modelo',
+      supplyType: 'three-127-220',
+      boardSize: '24 módulos DIN'
+    }
+  };
 
-  var rooms = [
-    { id: 'sala', name: 'Sala', type: 'Sala' },
-    { id: 'cozinha', name: 'Cozinha', type: 'Cozinha' },
-    { id: 'quarto-1', name: 'Quarto 1', type: 'Quarto' },
-    { id: 'quarto-2', name: 'Quarto 2', type: 'Quarto' },
-    { id: 'banheiro', name: 'Banheiro', type: 'Banheiro' }
-  ];
+  function cloneData(value) {
+    return JSON.parse(JSON.stringify(value));
+  }
 
-  var points = [
-    { id: 'luz-sala', roomId: 'sala', type: 'Iluminação', description: 'Luminária central', power: 60, voltage: 127 },
-    { id: 'tv-rack', roomId: 'sala', type: 'Tomada de uso geral', description: 'TV e rack', power: 300, voltage: 127 },
-    { id: 'bancada', roomId: 'cozinha', type: 'Tomada de uso geral', description: 'Bancada de preparo', power: 1200, voltage: 127 },
-    { id: 'luz-quarto-1', roomId: 'quarto-1', type: 'Iluminação', description: 'Luminária central', power: 60, voltage: 127 },
-    { id: 'chuveiro', roomId: 'banheiro', type: 'Chuveiro', description: 'Chuveiro elétrico', power: 6800, voltage: 220 }
-  ];
+  function createExampleProject() {
+    return cloneData(DEFAULT_PROJECT);
+  }
+
+  var initialProject = createExampleProject();
+  var circuits = initialProject.circuits;
+  var rooms = initialProject.rooms;
+  var points = initialProject.points;
 
   var toastTimer = null;
   var elements = {
@@ -73,6 +93,8 @@
     reviewList: document.getElementById('review-list'),
     reviewSummary: document.getElementById('review-summary'),
     reviewStatus: document.getElementById('review-status'),
+    saveStatus: document.getElementById('save-status'),
+    resetProject: document.getElementById('reset-project'),
     circuitModal: document.getElementById('circuit-modal'),
     pointCircuitModal: document.getElementById('point-circuit-modal'),
     installationModal: document.getElementById('installation-modal'),
@@ -103,6 +125,127 @@
     phaseCLegend: document.getElementById('phase-c-legend')
   };
   var activeSupplyKey = elements.supplyType.value;
+
+  function availableBoardSizes() {
+    return ['24 módulos DIN', '36 módulos DIN', '48 módulos DIN', '64 módulos DIN'];
+  }
+
+  function getBrowserStorage() {
+    try {
+      return window.localStorage || null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function normalizeStoredProject(value) {
+    if (!value || value.version !== PROJECT_STORAGE_VERSION || !value.settings) return null;
+    if (!Array.isArray(value.circuits) || !Array.isArray(value.rooms) || !Array.isArray(value.points)) return null;
+    if (typeof value.settings !== 'object') return null;
+
+    return {
+      circuits: value.circuits.filter(function (item) { return item && typeof item === 'object'; }),
+      rooms: value.rooms.filter(function (item) { return item && typeof item === 'object'; }),
+      points: value.points.filter(function (item) { return item && typeof item === 'object'; }),
+      settings: value.settings
+    };
+  }
+
+  function applyProjectSettings(settings) {
+    var supply = engine.getSupplyProfile(settings && settings.supplyType);
+    var boardSize = settings && settings.boardSize;
+
+    elements.projectName.value = settings && typeof settings.projectName === 'string'
+      ? settings.projectName
+      : DEFAULT_PROJECT.settings.projectName;
+    elements.supplyType.value = supply.key;
+    elements.boardSize.value = availableBoardSizes().indexOf(boardSize) !== -1
+      ? boardSize
+      : DEFAULT_PROJECT.settings.boardSize;
+    activeSupplyKey = elements.supplyType.value;
+  }
+
+  function restoreStoredProject() {
+    var storage = getBrowserStorage();
+    if (!storage) return false;
+
+    try {
+      var raw = storage.getItem(PROJECT_STORAGE_KEY);
+      if (!raw) return false;
+
+      var stored = normalizeStoredProject(JSON.parse(raw));
+      if (!stored) return false;
+
+      circuits = cloneData(stored.circuits);
+      rooms = cloneData(stored.rooms);
+      points = cloneData(stored.points);
+      applyProjectSettings(stored.settings);
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function setSaveStatus(state) {
+    if (!elements.saveStatus) return;
+
+    if (state === 'saved') {
+      elements.saveStatus.textContent = 'salvo neste navegador';
+      elements.saveStatus.style.background = '#e6f7f1';
+      elements.saveStatus.style.color = '#188868';
+      return;
+    }
+
+    elements.saveStatus.textContent = 'salvamento indisponível';
+    elements.saveStatus.style.background = '#fff6dd';
+    elements.saveStatus.style.color = '#9b6615';
+  }
+
+  function saveProjectState() {
+    var storage = getBrowserStorage();
+    if (!storage) {
+      setSaveStatus('unavailable');
+      return false;
+    }
+
+    try {
+      storage.setItem(PROJECT_STORAGE_KEY, JSON.stringify({
+        version: PROJECT_STORAGE_VERSION,
+        settings: {
+          projectName: elements.projectName.value,
+          supplyType: activeSupplyKey,
+          boardSize: elements.boardSize.value
+        },
+        circuits: circuits,
+        rooms: rooms,
+        points: points
+      }));
+      setSaveStatus('saved');
+      return true;
+    } catch (error) {
+      setSaveStatus('unavailable');
+      return false;
+    }
+  }
+
+  function restoreExampleProject() {
+    if (!window.confirm || !window.confirm('Restaurar o modelo de exemplo? Os dados atuais deste navegador serão substituídos.')) {
+      return;
+    }
+
+    var example = createExampleProject();
+    circuits = example.circuits;
+    rooms = example.rooms;
+    points = example.points;
+    applyProjectSettings(example.settings);
+    closeAllModals();
+    updateRoomOptions();
+    updateVoltageOptions();
+    render();
+    toast('Modelo de exemplo restaurado e salvo neste navegador.');
+  }
+
+  restoreStoredProject();
 
   function currentSupply() {
     return engine.getSupplyProfile(activeSupplyKey);
@@ -441,6 +584,7 @@
     renderBalance();
     renderBoard();
     renderMaterials();
+    saveProjectState();
   }
 
   function toast(message) {
@@ -651,6 +795,7 @@
   document.getElementById('cancel-installation-modal').addEventListener('click', closeInstallationModal);
   document.getElementById('add-room-button').addEventListener('click', openRoomModal);
   document.getElementById('add-point-button').addEventListener('click', openPointModal);
+  elements.resetProject.addEventListener('click', restoreExampleProject);
   document.getElementById('close-room-modal').addEventListener('click', closeRoomModal);
   document.getElementById('cancel-room-modal').addEventListener('click', closeRoomModal);
   document.getElementById('close-point-modal').addEventListener('click', closePointModal);
@@ -809,8 +954,14 @@
     toast('Ponto adicionado ao inventário. A criação do circuito continuará sendo uma decisão revisável.');
   });
 
-  elements.projectName.addEventListener('input', renderProjectTitle);
-  elements.boardSize.addEventListener('change', renderBoard);
+  elements.projectName.addEventListener('input', function () {
+    renderProjectTitle();
+    saveProjectState();
+  });
+  elements.boardSize.addEventListener('change', function () {
+    renderBoard();
+    saveProjectState();
+  });
   elements.supplyType.addEventListener('change', function () {
     var requestedSupply = elements.supplyType.value;
     var circuitValidation = engine.validateCircuitsForSupply(circuits, requestedSupply);
