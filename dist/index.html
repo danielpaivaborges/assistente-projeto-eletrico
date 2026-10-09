@@ -530,12 +530,15 @@
         .card-header, .card-body, .board-body { padding-left: 14px; padding-right: 14px; }
         .header-actions { flex-direction: column; }
         .header-actions .button { width: 100%; }
+        .inventory-row { align-items: flex-start; flex-wrap: wrap; }
+        .inventory-row > div:first-child { flex: 1 1 160px; }
+        .inventory-row .row-actions { width: 100%; margin-left: 0; justify-content: flex-end; }
       }
 
       @media print {
         @page { margin: 12mm; }
         body { min-width: 0; background: #ffffff; color: #172235; font-size: 11px; }
-        .sidebar, .header-actions, .button, .project-save-actions, .modal-backdrop, .toast { display: none !important; }
+        .sidebar, .header-actions, .button, .row-actions, .project-save-actions, .modal-backdrop, .toast { display: none !important; }
         .app-shell, .work-grid { display: block; min-height: 0; }
         .main { padding: 0; }
         .topbar { display: block; margin-bottom: 10px; }
