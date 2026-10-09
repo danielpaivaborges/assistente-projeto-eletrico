@@ -1,11 +1,11 @@
 {
   "name": "assistente-projeto-eletrico",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "private": true,
   "description": "Assistente para anteprojeto elétrico residencial, com regras explicitamente versionadas.",
   "scripts": {
     "build": "node scripts/build.mjs",
-    "test": "node src/engine/electrical-engine.test.js && node src/app.smoke.test.js && node src/app.persistence.test.js && node src/app.backup.test.js && node src/app.editing.test.js",
+    "test": "node src/engine/electrical-engine.test.js && node src/app.smoke.test.js && node src/app.persistence.test.js && node src/app.backup.test.js && node src/app.editing.test.js && node src/app.visual.test.js",
     "check": "npm run build && npm test"
   }
 }

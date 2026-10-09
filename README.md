@@ -2,7 +2,7 @@
 
 Ferramenta em construção para organizar anteprojetos de instalações elétricas residenciais no Brasil.
 
-> Estado atual: **v0.9 — edição rastreável do anteprojeto**. A aplicação organiza o imóvel, as cargas, os circuitos e as condições de instalação; salva localmente, gera backup portátil, importa cópias compatíveis, imprime um relatório de conferência e permite editar ou excluir registros sem quebrar vínculos silenciosamente.
+> Estado atual: **v0.10 — experiência visual do anteprojeto**. A aplicação organiza o imóvel, as cargas, os circuitos e as condições de instalação; salva localmente, gera backup portátil, importa cópias compatíveis, imprime um relatório de conferência, preserva vínculos em edições e apresenta o fluxo com assets visuais originais de componentes residenciais.
 
 ## O que já funciona
 
@@ -16,6 +16,7 @@ Ferramenta em construção para organizar anteprojetos de instalações elétric
 - Edição de ambientes, pontos e circuitos já cadastrados, preservando a origem da carga.
 - Exclusão protegida: ambiente com pontos e ponto vinculado a circuito não são removidos sem que o vínculo seja resolvido; ao excluir um circuito, seus pontos permanecem no inventário para nova organização.
 - Recálculo da potência e da tensão de circuitos criados por pontos quando um ponto vinculado é alterado.
+- Direção visual editorial, responsiva e própria, com ilustrações realistas originais de quadro de distribuição e dispositivos residenciais.
 - Salvamento automático local do projeto no navegador, com restauração ao reabrir a página.
 - Restauração consciente do modelo de exemplo, protegida por confirmação.
 - Exportação de backup em JSON e importação confirmada de arquivos compatíveis.
