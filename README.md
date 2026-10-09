@@ -59,7 +59,9 @@ O comando atualiza os arquivos de navegador em `dist/` e executa os testes do mo
 
 ## Publicacao online
 
-Todo envio para a branch `main` valida o aplicativo e publica a pasta `dist/` no GitHub Pages. O primeiro fluxo habilita o Pages com a origem **GitHub Actions**; os seguintes apenas atualizam a versao online. O fluxo tambem pode ser iniciado manualmente na aba **Actions** do repositorio.
+Todo envio para a branch `main` valida o aplicativo e publica a pasta `dist/` no GitHub Pages. O fluxo tambem pode ser iniciado manualmente na aba **Actions** do repositorio.
+
+Antes da primeira publicacao, o administrador do repositorio precisa selecionar **Settings → Pages → Build and deployment → Source: GitHub Actions**. Essa ativacao unica exige permissao administrativa da conta e o token de GitHub Actions nao possui essa permissao. Depois dela, as proximas atualizacoes serao publicadas automaticamente.
 
 ## Documentação técnica
 

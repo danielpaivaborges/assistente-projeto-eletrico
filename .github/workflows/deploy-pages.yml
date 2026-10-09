@@ -28,8 +28,6 @@ jobs:
 
       - name: Preparar GitHub Pages
         uses: actions/configure-pages@v5
-        with:
-          enablement: true
 
       - name: Construir e verificar o aplicativo
         run: npm run check
