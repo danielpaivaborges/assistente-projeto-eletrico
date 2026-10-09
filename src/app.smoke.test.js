@@ -62,5 +62,9 @@ assert.match(getElementById('circuits-body').innerHTML, /1 ponto vinculado/);
 assert.equal(getElementById('installation-status').textContent, '0 de 6 completos');
 assert.match(getElementById('installation-list').innerHTML, /Iluminação social/);
 assert.match(getElementById('installation-list').innerHTML, /dados pendentes/);
+assert.equal(getElementById('review-status').textContent, '10 pendências');
+assert.match(getElementById('review-summary').textContent, /5 circuitos manuais/);
+assert.match(getElementById('review-list').innerHTML, /Ponto elétrico/);
+assert.match(getElementById('review-list').innerHTML, /registro manual/);
 
 console.log('✔ interface inicializa com ambientes, pontos e circuitos');

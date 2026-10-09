@@ -13,7 +13,7 @@
 }(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  var ENGINE_VERSION = '0.5.0-preliminar';
+  var ENGINE_VERSION = '0.6.0-preliminar';
   var ALL_PHASES = ['A', 'B', 'C'];
   var SUPPLIES = {
     'three-127-220': {
@@ -700,6 +700,215 @@
     };
   }
 
+  function getCircuitLabel(circuit, index) {
+    var name = normalizedText(circuit && circuit.name);
+    return name || 'Circuito ' + (index + 1);
+  }
+
+  function getPointLabel(point, index) {
+    var description = normalizedText(point && point.description);
+    return description || 'Ponto ' + (index + 1);
+  }
+
+  function summarizeProjectReview(circuits, rooms, points, supply) {
+    var circuitList = circuits || [];
+    var roomList = rooms || [];
+    var pointList = points || [];
+    var traceability = getPointCircuitTraceability(circuitList, pointList);
+    var installation = summarizeInstallationReadiness(circuitList);
+    var supplyValidation = validateCircuitsForSupply(circuitList, supply);
+    var inventoryValidation = validateProjectInventory(roomList, pointList, supply);
+    var linkValidation = validatePointCircuitLinks(circuitList, pointList);
+    var circuitById = {};
+    var pointById = {};
+    var roomById = {};
+    var names = {};
+    var items = [];
+
+    function addItem(item) {
+      items.push(item);
+    }
+
+    function circuitLabelFor(id) {
+      var record = circuitById[id];
+      return record ? record.label : 'Circuito não localizado';
+    }
+
+    function pointLabelFor(id) {
+      var record = pointById[id];
+      return record ? record.label : 'Ponto não localizado';
+    }
+
+    circuitList.forEach(function (circuit, index) {
+      var circuitId = circuit && circuit.id !== undefined ? circuit.id : index;
+      var label = getCircuitLabel(circuit, index);
+      var nameKey = normalizedText(circuit && circuit.name).toLowerCase();
+
+      circuitById[circuitId] = { circuit: circuit, index: index, label: label };
+      if (nameKey) {
+        if (!names[nameKey]) names[nameKey] = [];
+        names[nameKey].push(circuitId);
+      }
+    });
+
+    pointList.forEach(function (point, index) {
+      var pointId = point && point.id !== undefined ? point.id : index;
+      pointById[pointId] = { point: point, index: index, label: getPointLabel(point, index) };
+    });
+
+    roomList.forEach(function (room, index) {
+      var roomId = room && room.id !== undefined ? room.id : index;
+      roomById[roomId] = normalizedText(room && room.name) || 'Ambiente ' + (index + 1);
+    });
+
+    supplyValidation.issues.forEach(function (issue) {
+      var description = issue.code === 'voltage-not-available-in-supply'
+        ? 'A tensão registrada não está disponível na alimentação selecionada.'
+        : issue.code === 'phase-not-available-in-supply'
+          ? 'A fase registrada não está disponível na alimentação selecionada.'
+          : 'A combinação entre tensão e fases precisa ser conferida.';
+
+      addItem({
+        scope: 'circuit',
+        entityId: issue.circuitId,
+        code: issue.code,
+        status: 'conflict',
+        title: circuitLabelFor(issue.circuitId),
+        description: description
+      });
+    });
+
+    inventoryValidation.issues.forEach(function (issue) {
+      var isPoint = issue.entity === 'point';
+      var label = isPoint ? pointLabelFor(issue.entityId) : (roomById[issue.entityId] || 'Ambiente não localizado');
+
+      addItem({
+        scope: issue.entity,
+        entityId: issue.entityId,
+        code: issue.code,
+        status: 'conflict',
+        title: label,
+        description: isPoint
+          ? 'Há dados do ponto que não podem ser usados na revisão do anteprojeto.'
+          : 'Há dados do ambiente que precisam ser conferidos no cadastro.'
+      });
+    });
+
+    linkValidation.issues.forEach(function (issue) {
+      var entityId = issue.circuitId !== undefined ? issue.circuitId : issue.pointId;
+      var scope = issue.circuitId !== undefined ? 'circuit' : 'point';
+      var title = scope === 'circuit' ? circuitLabelFor(entityId) : pointLabelFor(entityId);
+      var descriptions = {
+        'duplicate-point-in-circuit': 'O mesmo ponto aparece mais de uma vez no circuito.',
+        'linked-point-not-found': 'O circuito referencia um ponto que não está no inventário atual.',
+        'point-linked-to-multiple-circuits': 'O mesmo ponto está vinculado a mais de um circuito.',
+        'linked-circuit-power-diverges-from-points': 'A potência do circuito diverge da soma dos pontos vinculados.',
+        'linked-circuit-voltage-diverges-from-points': 'A tensão do circuito diverge da tensão dos pontos vinculados.'
+      };
+
+      addItem({
+        scope: scope,
+        entityId: entityId,
+        code: issue.code,
+        status: 'conflict',
+        title: title,
+        description: descriptions[issue.code] || 'Há um vínculo entre ponto e circuito que precisa ser conferido.'
+      });
+    });
+
+    traceability.unlinkedPointIds.forEach(function (pointId) {
+      addItem({
+        scope: 'point',
+        entityId: pointId,
+        code: 'point-without-circuit',
+        status: 'pending',
+        title: pointLabelFor(pointId),
+        description: 'O ponto está cadastrado, mas ainda não foi vinculado a um circuito.'
+      });
+    });
+
+    installation.circuits.forEach(function (readiness) {
+      if (readiness.status === 'ready-for-rule-evaluation') return;
+
+      var isInvalid = readiness.status === 'invalid-installation-data' || readiness.status === 'invalid-input';
+      var details = isInvalid ? readiness.invalidInputs : readiness.missingInputs;
+      var description = readiness.status === 'invalid-input'
+        ? 'A potência ou a tensão do circuito precisa ser conferida.'
+        : (isInvalid ? 'Corrija: ' : 'Falta informar: ') + details.join(', ') + '.';
+
+      addItem({
+        scope: 'circuit',
+        entityId: readiness.circuitId,
+        code: isInvalid ? 'installation-data-invalid' : 'installation-data-pending',
+        status: isInvalid ? 'conflict' : 'pending',
+        title: circuitLabelFor(readiness.circuitId),
+        description: description
+      });
+    });
+
+    traceability.circuits.forEach(function (summary) {
+      if (summary.source !== 'manual') return;
+
+      addItem({
+        scope: 'circuit',
+        entityId: summary.circuitId,
+        code: 'manual-circuit-entry',
+        status: 'manual',
+        title: circuitLabelFor(summary.circuitId),
+        description: 'Circuito lançado manualmente; mantenha a origem da carga registrada para conferência.'
+      });
+    });
+
+    Object.keys(names).forEach(function (name) {
+      if (names[name].length < 2) return;
+
+      names[name].forEach(function (circuitId) {
+        addItem({
+          scope: 'circuit',
+          entityId: circuitId,
+          code: 'duplicate-circuit-name',
+          status: 'pending',
+          title: circuitLabelFor(circuitId),
+          description: 'Há mais de um circuito com este nome; diferencie os rótulos para a conferência do quadro.'
+        });
+      });
+    });
+
+    var statusOrder = { conflict: 0, pending: 1, manual: 2 };
+    items.sort(function (first, second) {
+      var statusDifference = statusOrder[first.status] - statusOrder[second.status];
+      if (statusDifference) return statusDifference;
+      return first.title.localeCompare(second.title);
+    });
+
+    var totals = items.reduce(function (summary, item) {
+      if (item.status === 'conflict') summary.conflictCount += 1;
+      else if (item.status === 'pending') summary.pendingCount += 1;
+      else summary.manualCircuitCount += 1;
+      return summary;
+    }, {
+      circuitCount: circuitList.length,
+      pointCount: pointList.length,
+      linkedPointCount: traceability.totals.linkedPointCount,
+      unlinkedPointCount: traceability.totals.unlinkedPointCount,
+      installationReadyCount: installation.totals.readyCount,
+      conflictCount: 0,
+      pendingCount: 0,
+      manualCircuitCount: 0
+    });
+    totals.openItemCount = totals.conflictCount + totals.pendingCount;
+
+    return {
+      items: items,
+      totals: totals,
+      traceability: traceability,
+      installation: installation,
+      supplyValidation: supplyValidation,
+      inventoryValidation: inventoryValidation,
+      rulesetVersion: ENGINE_VERSION
+    };
+  }
+
   function createCircuitFromPoints(draft, points, existingCircuits, supply) {
     var source = draft || {};
     var name = normalizedText(source.name);
@@ -790,6 +999,7 @@
     getSupportedVoltages: getSupportedVoltages,
     getSizingReadiness: getSizingReadiness,
     getPointCircuitTraceability: getPointCircuitTraceability,
+    summarizeProjectReview: summarizeProjectReview,
     summarizeInstallationReadiness: summarizeInstallationReadiness,
     suggestPhaseAssignment: suggestPhaseAssignment,
     summarizeProjectInventory: summarizeProjectInventory,

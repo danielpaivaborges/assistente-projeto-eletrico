@@ -209,3 +209,41 @@ test('resume a prontidão de instalação de cada circuito', () => {
   assert.equal(summary.byCircuitId.pronto.status, 'ready-for-rule-evaluation');
   assert.equal(summary.byCircuitId.invalido.status, 'invalid-installation-data');
 });
+
+test('organiza uma revisão do anteprojeto sem aplicar critérios normativos', () => {
+  const review = engine.summarizeProjectReview([
+    {
+      id: 'luz', name: 'Iluminação social', power: 100, voltage: 127, phase: 'A',
+      powerSource: 'linked-points', pointIds: ['luz-sala'],
+      installation: {
+        installationMethod: 'Eletroduto embutido',
+        conductorMaterial: 'Cobre',
+        ambientTemperatureC: 30,
+        groupingCount: 1,
+        lengthM: 10,
+        protectionContext: 'Circuito terminal'
+      }
+    },
+    { id: 'manual', name: 'Reserva', power: 800, voltage: 127, phase: 'B' }
+  ], [
+    { id: 'sala', name: 'Sala', type: 'Sala' }
+  ], [
+    { id: 'luz-sala', roomId: 'sala', type: 'Iluminação', description: 'Luminária sala', power: 100, voltage: 127 },
+    { id: 'rack', roomId: 'sala', type: 'Tomada de uso geral', description: 'TV e rack', power: 300, voltage: 127 }
+  ], 'three-127-220');
+
+  assert.deepEqual(review.totals, {
+    circuitCount: 2,
+    pointCount: 2,
+    linkedPointCount: 1,
+    unlinkedPointCount: 1,
+    installationReadyCount: 1,
+    conflictCount: 0,
+    pendingCount: 2,
+    manualCircuitCount: 1,
+    openItemCount: 2
+  });
+  assert.ok(review.items.some((item) => item.code === 'point-without-circuit' && item.title === 'TV e rack'));
+  assert.ok(review.items.some((item) => item.code === 'installation-data-pending' && item.title === 'Reserva'));
+  assert.ok(review.items.some((item) => item.code === 'manual-circuit-entry' && item.title === 'Reserva'));
+});

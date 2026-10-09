@@ -70,6 +70,9 @@
     inventoryStatus: document.getElementById('inventory-status'),
     installationList: document.getElementById('installation-list'),
     installationStatus: document.getElementById('installation-status'),
+    reviewList: document.getElementById('review-list'),
+    reviewSummary: document.getElementById('review-summary'),
+    reviewStatus: document.getElementById('review-status'),
     circuitModal: document.getElementById('circuit-modal'),
     pointCircuitModal: document.getElementById('point-circuit-modal'),
     installationModal: document.getElementById('installation-modal'),
@@ -379,11 +382,61 @@
     }).join('');
   }
 
+  function reviewStatusView(status) {
+    if (status === 'conflict') {
+      return { label: 'conflito de dados', background: '#fff0f2', color: '#be3d4c' };
+    }
+
+    if (status === 'manual') {
+      return { label: 'registro manual', background: '#edf7ff', color: '#1677ad' };
+    }
+
+    return { label: 'a completar', background: '#fff6dd', color: '#9b6615' };
+  }
+
+  function renderReview() {
+    var review = engine.summarizeProjectReview(circuits, rooms, points, currentSupply());
+    var totals = review.totals;
+    var headline = totals.conflictCount
+      ? totals.conflictCount + (totals.conflictCount === 1 ? ' conflito' : ' conflitos')
+      : totals.pendingCount
+        ? totals.pendingCount + (totals.pendingCount === 1 ? ' pendência' : ' pendências')
+        : 'dados organizados';
+    var summaryParts = [];
+
+    if (totals.conflictCount) summaryParts.push(totals.conflictCount + (totals.conflictCount === 1 ? ' conflito de dados' : ' conflitos de dados'));
+    if (totals.pendingCount) summaryParts.push(totals.pendingCount + (totals.pendingCount === 1 ? ' item a completar' : ' itens a completar'));
+    if (totals.manualCircuitCount) summaryParts.push(totals.manualCircuitCount + (totals.manualCircuitCount === 1 ? ' circuito manual' : ' circuitos manuais'));
+    if (!summaryParts.length) summaryParts.push('Os dados cadastrados não têm pendências de organização identificadas.');
+
+    elements.reviewStatus.textContent = headline;
+    elements.reviewStatus.style.background = totals.conflictCount ? '#fff0f2' : totals.pendingCount ? '#fff6dd' : '#e6f7f1';
+    elements.reviewStatus.style.color = totals.conflictCount ? '#be3d4c' : totals.pendingCount ? '#9b6615' : '#188868';
+    elements.reviewSummary.textContent = summaryParts.join(' · ');
+
+    if (!review.items.length) {
+      elements.reviewList.innerHTML = '<p class="review-empty">Nenhuma pendência de organização foi identificada. A validação técnica e normativa continua necessária.</p>';
+      return;
+    }
+
+    elements.reviewList.innerHTML = review.items.map(function (item) {
+      var status = reviewStatusView(item.status);
+      var scope = item.scope === 'point' ? 'Ponto elétrico' : item.scope === 'room' ? 'Ambiente' : 'Circuito';
+
+      return '<div class="review-row">' +
+        '<span class="review-scope">' + escapeHtml(scope) + '</span>' +
+        '<div><span class="review-name">' + escapeHtml(item.title) + '</span><span class="review-description">' + escapeHtml(item.description) + '</span></div>' +
+        '<span class="review-state" style="background:' + status.background + ';color:' + status.color + '">' + escapeHtml(status.label) + '</span>' +
+        '</div>';
+    }).join('');
+  }
+
   function render() {
     renderProjectTitle();
     renderInventory();
     renderCircuits();
     renderInstallation();
+    renderReview();
     renderMetrics();
     renderBalance();
     renderBoard();

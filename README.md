@@ -2,7 +2,7 @@
 
 Ferramenta em construção para organizar anteprojetos de instalações elétricas residenciais no Brasil.
 
-> Estado atual: **v0.5 — condições de instalação rastreáveis**. A aplicação começa pelo imóvel, registra cargas previstas, permite criar circuitos a partir dos pontos selecionados e coleta os dados físicos mínimos por circuito, mas não recomenda seção de condutor ou proteção sem regras validadas.
+> Estado atual: **v0.6 — revisão rastreável do anteprojeto**. A aplicação organiza o imóvel, as cargas, os circuitos e as condições de instalação; também destaca inconsistências e dados faltantes, sem recomendar condutor ou proteção.
 
 ## O que já funciona
 
@@ -11,6 +11,8 @@ Ferramenta em construção para organizar anteprojetos de instalações elétric
 - Criação de circuitos a partir de pontos, com soma de potência, tensão conferida e vínculo rastreável.
 - Cadastro por circuito de comprimento do trajeto, método de instalação, material do condutor, temperatura, agrupamento e contexto de proteção.
 - Indicador de prontidão que separa dados pendentes, inválidos e completos para futura avaliação por regras técnicas.
+- Painel de revisão que separa conflitos de dados, informações a completar e circuitos lançados manualmente.
+- Conferência de rastreabilidade entre pontos, circuitos, alimentação e inventário, sem impor critérios normativos.
 - Corrente nominal estimada por potência e tensão.
 - Visualização de corrente por fase.
 - Redistribuição heurística apenas de circuitos monofásicos; cargas entre fases são preservadas.
@@ -50,7 +52,7 @@ O comando atualiza os arquivos de navegador em `dist/` e executa os testes do mo
 
 ## Próximas etapas
 
-1. Introduzir regras técnicas com fonte/edição, casos de teste e revisão profissional.
+1. Registrar fontes, edição e casos de teste antes de introduzir qualquer regra técnica.
 2. Avaliar queda de tensão somente após validar as regras e os dados necessários.
 3. Separar a coleta de dispositivos de proteção da recomendação técnica.
-4. Gerar relatório de anteprojeto rastreável, incluindo ambientes, pontos, trajetos e quadro.
+4. Gerar relatório de anteprojeto rastreável, incluindo revisão, ambientes, pontos, trajetos e quadro.

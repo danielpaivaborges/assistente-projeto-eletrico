@@ -419,6 +419,15 @@
       .installation-state { display: inline-flex; align-items: center; min-height: 27px; padding: 5px 8px; border-radius: 999px; font-size: .69rem; font-weight: 850; white-space: nowrap; }
       .installation-note { margin: 15px 0 0; padding-top: 13px; border-top: 1px solid #e8eef4; color: #738295; font-size: .75rem; }
 
+      .review-summary { margin: 0 0 12px; color: #60738a; font-size: .77rem; }
+      .review-list { display: grid; max-height: 420px; gap: 8px; overflow-y: auto; padding-right: 2px; }
+      .review-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: start; padding: 11px; border: 1px solid #e1e9f1; border-radius: 10px; background: #fbfdff; }
+      .review-scope { display: inline-flex; align-items: center; min-height: 24px; padding: 4px 7px; border-radius: 7px; background: #edf4fa; color: #59718a; font-size: .66rem; font-weight: 850; white-space: nowrap; }
+      .review-name { display: block; color: #26425b; font-size: .82rem; font-weight: 850; }
+      .review-description { display: block; margin-top: 3px; color: #718195; font-size: .73rem; line-height: 1.4; }
+      .review-state { display: inline-flex; align-items: center; min-height: 26px; padding: 5px 8px; border-radius: 999px; font-size: .67rem; font-weight: 850; white-space: nowrap; }
+      .review-empty { margin: 0; padding: 13px; border: 1px dashed #b9c9d7; border-radius: 10px; color: #667b90; font-size: .78rem; text-align: center; }
+
       .modal-backdrop {
         position: fixed;
         z-index: 10;
@@ -485,6 +494,7 @@
         .form-grid .wide, .side-stack .card:last-child { grid-column: auto; }
         .inventory-column + .inventory-column { padding-top: 16px; padding-left: 0; border-top: 1px solid #e5edf4; border-left: 0; }
         .installation-row { grid-template-columns: 1fr; gap: 8px; }
+        .review-row { grid-template-columns: 1fr; gap: 7px; }
       }
 
       @media (max-width: 460px) {
@@ -519,7 +529,7 @@
         </nav>
 
         <div class="side-footer">
-          <strong>Base de regras v0.5</strong><br>
+          <strong>Base de regras v0.6</strong><br>
           Anteprojeto revisável · Brasil
         </div>
       </aside>
@@ -685,6 +695,21 @@
             <article class="card">
               <div class="card-header">
                 <div>
+                  <h2>Revisão do anteprojeto</h2>
+                  <p>Consistência, rastreabilidade e informações a conferir.</p>
+                </div>
+                <span class="status-pill" id="review-status" style="background:#fff6dd;color:#9b6615">—</span>
+              </div>
+              <div class="card-body">
+                <p class="review-summary" id="review-summary">—</p>
+                <div class="review-list" id="review-list"></div>
+                <p class="installation-note">Este painel organiza a revisão do cadastro. Ele não certifica conformidade com normas nem substitui a análise de um profissional habilitado.</p>
+              </div>
+            </article>
+
+            <article class="card">
+              <div class="card-header">
+                <div>
                   <h2>Quadro em tempo real</h2>
                   <p>Representação inicial para enxergar ocupação, fases e disjuntores.</p>
                 </div>
@@ -745,16 +770,16 @@
             <article class="card">
               <div class="card-header">
                 <div>
-                  <h2>Checklist técnico</h2>
-                  <p>Primeiras verificações do fluxo.</p>
+                  <h2>Limites da revisão</h2>
+                  <p>O que o sistema ainda não decide.</p>
                 </div>
               </div>
               <div class="card-body">
                 <div class="checklist">
-                  <div class="check"><span class="check-mark">✓</span><span>Circuitos de iluminação e tomadas foram separados.</span></div>
-                  <div class="check"><span class="check-mark">✓</span><span>Fases estão visíveis para revisão do quadro.</span></div>
-                  <div class="check"><span class="check-mark check-pending">!</span><span>Falta informar distâncias para análise de queda de tensão.</span></div>
-                  <div class="check"><span class="check-mark check-pending">!</span><span>Falta validar características da instalação e proteções.</span></div>
+                  <div class="check"><span class="check-mark">✓</span><span>A revisão mostra pontos sem circuito, vínculos e dados de instalação pendentes.</span></div>
+                  <div class="check"><span class="check-mark">✓</span><span>Circuitos manuais continuam identificados para conferência.</span></div>
+                  <div class="check"><span class="check-mark check-pending">!</span><span>O sistema não escolhe condutores, disjuntores, DR ou DPS.</span></div>
+                  <div class="check"><span class="check-mark check-pending">!</span><span>A validação normativa e a execução exigem responsável habilitado.</span></div>
                 </div>
               </div>
             </article>
