@@ -93,9 +93,16 @@ vm.runInNewContext(appSource, {
 triggerAction('rooms-list', 'room', 'edit', 'sala');
 assert.equal(getElementById('room-modal-title').textContent, 'Editar ambiente');
 assert.equal(getElementById('room-name').value, 'Sala');
+assert.match(getElementById('room-notes').value, /TV, rack e roteador/);
 getElementById('room-name').value = 'Sala principal';
+getElementById('room-notes').value = 'Confirmar tomada para a TV e o roteador.';
 submit('room-form');
 assert.match(getElementById('rooms-list').innerHTML, /Sala principal/);
+assert.match(getElementById('room-map').innerHTML, /Confirmar tomada para a TV e o roteador/);
+
+triggerAction('room-map', 'room', 'add-point', 'cozinha');
+assert.equal(getElementById('point-modal-title').textContent, 'Adicionar ponto elétrico');
+assert.equal(getElementById('point-room').value, 'cozinha');
 
 triggerAction('points-list', 'point', 'edit', 'chuveiro');
 assert.equal(getElementById('point-power').value, 6800);
@@ -103,6 +110,7 @@ getElementById('point-power').value = '7000';
 submit('point-form');
 
 let saved = JSON.parse(storedValues.get(storageKey));
+assert.equal(saved.rooms.find((room) => room.id === 'sala').notes, 'Confirmar tomada para a TV e o roteador.');
 assert.equal(saved.points.find((point) => point.id === 'chuveiro').power, 7000);
 assert.equal(saved.circuits.find((circuit) => circuit.id === 5).power, 7000);
 

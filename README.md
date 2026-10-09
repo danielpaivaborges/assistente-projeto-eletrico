@@ -2,12 +2,15 @@
 
 Ferramenta em construção para organizar anteprojetos de instalações elétricas residenciais no Brasil.
 
-> Estado atual: **v0.11 — jornada guiada do anteprojeto**. A aplicação organiza o imóvel, as cargas, os circuitos e as condições de instalação; mostra o próximo passo do cadastro, salva localmente, gera backup portátil, importa cópias compatíveis, imprime um relatório de conferência, preserva vínculos em edições e apresenta o fluxo com assets visuais originais de componentes residenciais.
+> Estado atual: **v0.12 — mapa acionável do imóvel**. A aplicação organiza o imóvel, as cargas, os circuitos e as condições de instalação; mostra o próximo passo do cadastro, mapeia visualmente as cargas e pendências por ambiente, registra observações de campo, salva localmente, gera backup portátil, importa cópias compatíveis e imprime um relatório de conferência.
 
 ## O que já funciona
 
 - Cadastro de circuitos e cargas.
 - Jornada visual com progresso por ambiente, pontos, circuitos, vínculos e trajetos; o próximo passo leva diretamente à ação correspondente.
+- Mapa visual do imóvel com carga prevista, tipos de ponto, pendências de vínculo e ações contextualizadas por ambiente.
+- Observações de campo por ambiente, preservadas em edição, armazenamento local e backup.
+- Atalho em cada ambiente para abrir o cadastro de ponto já associado ao local escolhido.
 - Cadastro de ambientes e pontos elétricos, com potência/tensão previstas por ambiente.
 - Criação de circuitos a partir de pontos, com soma de potência, tensão conferida e vínculo rastreável.
 - Cadastro por circuito de comprimento do trajeto, método de instalação, material do condutor, temperatura, agrupamento e contexto de proteção.

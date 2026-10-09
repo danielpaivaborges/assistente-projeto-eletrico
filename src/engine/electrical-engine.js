@@ -437,12 +437,14 @@
     var source = room || {};
     var name = normalizedText(source.name);
     var type = normalizedText(source.type) || 'Outro ambiente';
+    var notes = normalizedText(source.notes);
     var hasArea = source.areaM2 !== undefined && source.areaM2 !== null && source.areaM2 !== '';
     var area = hasArea ? positiveNumber(source.areaM2) : null;
     var issues = [];
 
     if (!name) issues.push({ code: 'missing-room-name' });
     if (hasArea && area === null) issues.push({ code: 'invalid-room-area' });
+    if (notes.length > 600) issues.push({ code: 'room-notes-too-long' });
 
     return {
       valid: issues.length === 0,
@@ -450,7 +452,8 @@
       room: Object.assign({}, source, {
         name: name,
         type: type,
-        areaM2: area
+        areaM2: area,
+        notes: notes
       }),
       rulesetVersion: ENGINE_VERSION
     };
@@ -553,6 +556,7 @@
         name: validation.room.name || 'Ambiente sem nome',
         type: validation.room.type,
         areaM2: validation.room.areaM2,
+        notes: validation.room.notes,
         pointCount: roomPoints.length,
         plannedPowerW: plannedPowerW,
         pointTypes: pointTypes
@@ -1057,7 +1061,7 @@
     }
 
     var original = copiedRooms[roomIndex];
-    var validation = validateRoom(Object.assign({}, roomDraft || {}, { id: original.id }));
+    var validation = validateRoom(Object.assign({}, original, roomDraft || {}, { id: original.id }));
 
     if (!validation.valid) {
       return validationFailure(validation.issues, { rooms: copiedRooms });

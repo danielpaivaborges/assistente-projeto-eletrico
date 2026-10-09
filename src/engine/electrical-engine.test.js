@@ -54,7 +54,7 @@ test('não oferece dimensionamento de condutor sem dados de instalação', () =>
 });
 
 test('valida ambiente e ponto antes de usar os dados no projeto', () => {
-  const room = engine.validateRoom({ id: 'sala', name: 'Sala', type: 'Sala', areaM2: 18 });
+  const room = engine.validateRoom({ id: 'sala', name: 'Sala', type: 'Sala', areaM2: 18, notes: '  Conferir rack e roteador.  ' });
   const point = engine.validatePoint({
     id: 'tv',
     roomId: 'sala',
@@ -65,6 +65,7 @@ test('valida ambiente e ponto antes de usar os dados no projeto', () => {
   }, [room.room], 'three-127-220');
 
   assert.equal(room.valid, true);
+  assert.equal(room.room.notes, 'Conferir rack e roteador.');
   assert.equal(point.valid, true);
   assert.equal(point.point.power, 280);
 });
@@ -87,6 +88,25 @@ test('resume ambientes, pontos e potência prevista sem inferir requisitos norma
   });
   assert.equal(summary.rooms[0].pointCount, 2);
   assert.equal(summary.rooms[1].plannedPowerW, 6800);
+});
+
+test('preserva observações de campo ao atualizar outro dado do ambiente', () => {
+  const result = engine.updateRoomInProject({
+    id: 'sala',
+    name: 'Sala ampliada',
+    type: 'Sala',
+    areaM2: 21
+  }, [{
+    id: 'sala',
+    name: 'Sala',
+    type: 'Sala',
+    areaM2: 18,
+    notes: 'Conferir posição do rack.'
+  }]);
+
+  assert.equal(result.valid, true);
+  assert.equal(result.room.notes, 'Conferir posição do rack.');
+  assert.equal(result.room.name, 'Sala ampliada');
 });
 
 test('bloqueia inventário com ponto incompatível com a alimentação escolhida', () => {

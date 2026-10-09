@@ -22,11 +22,11 @@
       { id: 6, name: 'Lavanderia', category: 'Tomada de uso específico', voltage: 127, power: 1500, phase: 'A' }
     ],
     rooms: [
-      { id: 'sala', name: 'Sala', type: 'Sala' },
-      { id: 'cozinha', name: 'Cozinha', type: 'Cozinha' },
-      { id: 'quarto-1', name: 'Quarto 1', type: 'Quarto' },
-      { id: 'quarto-2', name: 'Quarto 2', type: 'Quarto' },
-      { id: 'banheiro', name: 'Banheiro', type: 'Banheiro' }
+      { id: 'sala', name: 'Sala', type: 'Sala', notes: 'Conferir posição para TV, rack e roteador.' },
+      { id: 'cozinha', name: 'Cozinha', type: 'Cozinha', notes: 'Confirmar as cargas de bancada antes de fechar os circuitos.' },
+      { id: 'quarto-1', name: 'Quarto 1', type: 'Quarto', notes: 'Prever o uso principal do ambiente.' },
+      { id: 'quarto-2', name: 'Quarto 2', type: 'Quarto', notes: '' },
+      { id: 'banheiro', name: 'Banheiro', type: 'Banheiro', notes: 'Confirmar posição e potência do chuveiro.' }
     ],
     points: [
       { id: 'luz-sala', roomId: 'sala', type: 'Iluminação', description: 'Luminária central', power: 60, voltage: 127 },
@@ -94,6 +94,9 @@
     pointsList: document.getElementById('points-list'),
     inventorySummary: document.getElementById('inventory-summary'),
     inventoryStatus: document.getElementById('inventory-status'),
+    roomMap: document.getElementById('room-map'),
+    roomMapStatus: document.getElementById('room-map-status'),
+    roomMapSummary: document.getElementById('room-map-summary'),
     installationList: document.getElementById('installation-list'),
     installationStatus: document.getElementById('installation-status'),
     reviewList: document.getElementById('review-list'),
@@ -128,6 +131,7 @@
     roomName: document.getElementById('room-name'),
     roomType: document.getElementById('room-type'),
     roomArea: document.getElementById('room-area'),
+    roomNotes: document.getElementById('room-notes'),
     pointModalTitle: document.getElementById('point-modal-title'),
     pointSubmit: document.getElementById('point-submit'),
     pointFormHelp: document.getElementById('point-form-help'),
@@ -710,6 +714,80 @@
     return room ? room.name : 'Ambiente não localizado';
   }
 
+  function formatArea(value) {
+    var area = Number(value);
+    if (!Number.isFinite(area) || area <= 0) return 'área a informar';
+    return area.toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' m²';
+  }
+
+  function roomIcon(type) {
+    var icons = {
+      Sala: '⌂',
+      Quarto: '▣',
+      Cozinha: '◫',
+      Banheiro: '◌',
+      Lavanderia: '≋',
+      'Área externa': '⌁'
+    };
+
+    return icons[type] || '◇';
+  }
+
+  function roomMapStatus(roomId, traceability) {
+    var roomPoints = points.filter(function (point) { return String(point.roomId) === String(roomId); });
+    var unlinked = roomPoints.filter(function (point) {
+      return !(traceability.pointLinks[point.id] || []).length;
+    }).length;
+    var conflicts = roomPoints.filter(function (point) {
+      return (traceability.pointLinks[point.id] || []).length > 1;
+    }).length;
+
+    if (!roomPoints.length) return { label: 'sem pontos', tone: 'is-empty' };
+    if (conflicts) return { label: conflicts + (conflicts === 1 ? ' vínculo em conflito' : ' vínculos em conflito'), tone: 'is-conflict' };
+    if (unlinked) return { label: unlinked + (unlinked === 1 ? ' ponto sem circuito' : ' pontos sem circuito'), tone: 'is-pending' };
+    return { label: 'pontos organizados', tone: 'is-ready' };
+  }
+
+  function renderRoomMap() {
+    var summary = engine.summarizeProjectInventory(rooms, points);
+    var traceability = pointCircuitTraceability();
+    var roomSummaries = summary.rooms;
+    var maxPower = Math.max.apply(null, roomSummaries.map(function (room) { return room.plannedPowerW; }).concat([1]));
+    var pending = traceability.totals.unlinkedPointCount + traceability.totals.duplicatePointCount;
+
+    elements.roomMapSummary.textContent = summary.totals.roomCount + (summary.totals.roomCount === 1 ? ' ambiente' : ' ambientes') + ' · ' + summary.totals.pointCount + (summary.totals.pointCount === 1 ? ' ponto' : ' pontos') + ' · ' + formatPower(summary.totals.plannedPowerW) + ' previstos';
+    elements.roomMapStatus.textContent = pending
+      ? pending + (pending === 1 ? ' atenção' : ' atenções')
+      : roomSummaries.length ? 'organizado' : 'comece aqui';
+    elements.roomMapStatus.style.background = pending ? '#fff6dd' : roomSummaries.length ? '#e6f7f1' : '#edf7ff';
+    elements.roomMapStatus.style.color = pending ? '#9b6615' : roomSummaries.length ? '#188868' : '#1677ad';
+
+    if (!roomSummaries.length) {
+      elements.roomMap.innerHTML = '<div class="room-map-empty"><span aria-hidden="true">⌂</span><strong>Seu imóvel ainda não tem ambientes.</strong><p>Comece pela estrutura e, depois, inclua os pontos elétricos de cada espaço.</p><button class="button button-primary button-compact" type="button" data-project-entity="room" data-project-action="edit" data-project-id="new">＋ Adicionar ambiente</button></div>';
+      return;
+    }
+
+    elements.roomMap.innerHTML = roomSummaries.map(function (room, index) {
+      var status = roomMapStatus(room.id, traceability);
+      var pointLabel = room.pointCount === 1 ? '1 ponto' : room.pointCount + ' pontos';
+      var tags = Object.keys(room.pointTypes).slice(0, 3).map(function (type) {
+        return '<span>' + escapeHtml(type) + ' · ' + room.pointTypes[type] + '</span>';
+      }).join('') || '<span>sem cargas registradas</span>';
+      var note = room.notes || 'Sem observações de campo.';
+      var powerWidth = room.plannedPowerW ? Math.max(9, room.plannedPowerW / maxPower * 100) : 0;
+
+      return '<article class="room-map-card room-map-tone-' + (index % 5 + 1) + '">' +
+        '<div class="room-map-card-head"><span class="room-map-icon" aria-hidden="true">' + roomIcon(room.type) + '</span><span class="room-map-type">' + escapeHtml(room.type) + '</span><span class="room-map-state ' + status.tone + '">' + escapeHtml(status.label) + '</span></div>' +
+        '<h3>' + escapeHtml(room.name) + '</h3>' +
+        '<p class="room-map-area">' + escapeHtml(formatArea(room.areaM2)) + '</p>' +
+        '<div class="room-map-load"><div><span>' + escapeHtml(pointLabel) + '</span><strong>' + formatPower(room.plannedPowerW) + '</strong></div><span class="room-map-load-track"><i style="width:' + powerWidth.toFixed(0) + '%"></i></span></div>' +
+        '<div class="room-map-tags">' + tags + '</div>' +
+        '<p class="room-map-note">' + escapeHtml(note) + '</p>' +
+        '<div class="room-map-actions"><button class="button button-secondary button-compact" type="button" data-project-entity="room" data-project-action="add-point" data-project-id="' + escapeHtml(room.id) + '">＋ Ponto</button><button class="room-map-edit" type="button" data-project-entity="room" data-project-action="edit" data-project-id="' + escapeHtml(room.id) + '">Editar</button></div>' +
+        '</article>';
+    }).join('');
+  }
+
   function renderInventory() {
     var summary = engine.summarizeProjectInventory(rooms, points);
     var totals = summary.totals;
@@ -848,6 +926,7 @@
   function render() {
     renderProjectTitle();
     renderJourney();
+    renderRoomMap();
     renderInventory();
     renderCircuits();
     renderInstallation();
@@ -934,6 +1013,7 @@
       elements.roomName.value = room.name || '';
       elements.roomType.value = room.type || 'Outro ambiente';
       elements.roomArea.value = room.areaM2 === null || room.areaM2 === undefined ? '' : room.areaM2;
+      elements.roomNotes.value = room.notes || '';
       elements.roomFormHelp.textContent = 'A edição do ambiente preserva seus pontos vinculados. Para excluir o ambiente, primeiro remova ou mova seus pontos.';
     } else {
       elements.roomModalTitle.textContent = 'Adicionar ambiente';
@@ -954,7 +1034,7 @@
     elements.roomFormHelp.textContent = 'A área é apenas descritiva nesta etapa. Regras de quantidade mínima de pontos ainda não são inferidas pelo sistema.';
   }
 
-  function openPointModal(pointId) {
+  function openPointModal(pointId, preferredRoomId) {
     var point = pointId === undefined || pointId === null ? null : pointById(pointId);
 
     elements.pointForm.reset();
@@ -982,6 +1062,9 @@
     } else {
       elements.pointModalTitle.textContent = 'Adicionar ponto elétrico';
       elements.pointSubmit.textContent = 'Adicionar ponto';
+      if (preferredRoomId && rooms.some(function (room) { return String(room.id) === String(preferredRoomId); })) {
+        elements.pointRoom.value = preferredRoomId;
+      }
       elements.pointFormHelp.textContent = 'A potência é uma previsão da carga; ela não substitui a análise de demanda, condutor ou proteção.';
     }
 
@@ -1276,6 +1359,11 @@
       if (entity === 'circuit') deleteCircuit(id);
       if (entity === 'room') deleteRoom(id);
       if (entity === 'point') deletePoint(id);
+      return;
+    }
+
+    if (action === 'add-point' && entity === 'room') {
+      openPointModal(null, id);
     }
   }
 
@@ -1326,6 +1414,7 @@
   document.getElementById('balance-button').addEventListener('click', automaticBalance);
   document.getElementById('balance-secondary').addEventListener('click', automaticBalance);
   elements.body.addEventListener('click', handleProjectAction);
+  elements.roomMap.addEventListener('click', handleProjectAction);
   elements.roomsList.addEventListener('click', handleProjectAction);
   elements.pointsList.addEventListener('click', handleProjectAction);
 
@@ -1471,7 +1560,8 @@
       id: editingRoomId !== null ? editingRoomId : 'room-' + Date.now(),
       name: elements.roomName.value.trim(),
       type: elements.roomType.value,
-      areaM2: areaInput === '' ? null : Number(areaInput)
+      areaM2: areaInput === '' ? null : Number(areaInput),
+      notes: elements.roomNotes.value
     };
 
     if (editingRoomId !== null) {

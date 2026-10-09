@@ -44,7 +44,7 @@
         font: 16px/1.45 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       }
 
-      button, input, select { font: inherit; }
+      button, input, select, textarea { font: inherit; }
       button { cursor: pointer; }
 
       .app-shell {
@@ -421,6 +421,86 @@
       .journey-stage.is-current .journey-stage-marker { border-color: var(--blue); background: var(--blue-soft); color: var(--blue-dark); }
       .journey-stage.is-current strong { color: #17608f; }
 
+      .room-map-section {
+        position: relative;
+        overflow: hidden;
+        margin: 0 0 22px;
+        padding: 21px 22px 17px;
+        border: 1px solid #d0e2ee;
+        border-radius: 20px;
+        background:
+          radial-gradient(circle at 103% -16%, rgba(79, 185, 235, .16), transparent 36%),
+          radial-gradient(circle at -8% 112%, rgba(242, 181, 65, .12), transparent 32%),
+          linear-gradient(145deg, #fafdff, #f0f8fc 60%, #fafdff);
+        box-shadow: 0 12px 28px rgba(36, 88, 125, .06);
+      }
+      .room-map-section::after {
+        position: absolute;
+        right: -50px;
+        bottom: -60px;
+        width: 190px;
+        height: 190px;
+        content: '';
+        border: 1px solid rgba(56, 151, 205, .13);
+        border-radius: 50%;
+        box-shadow: 0 0 0 22px rgba(56, 151, 205, .03), 0 0 0 46px rgba(56, 151, 205, .02);
+        pointer-events: none;
+      }
+      .room-map-header, .room-map, .room-map-footnote { position: relative; z-index: 1; }
+      .room-map-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+      .room-map-kicker { display: flex; align-items: center; gap: 7px; margin: 0 0 5px; color: #1677ad; font-size: .69rem; font-weight: 850; letter-spacing: .1em; text-transform: uppercase; }
+      .room-map-kicker::before { width: 19px; height: 2px; content: ''; background: var(--yellow); }
+      .room-map-header h2 { margin: 0; color: #173851; font-size: 1.18rem; letter-spacing: -.02em; }
+      .room-map-header p:last-child { margin: 4px 0 0; color: #667f92; font-size: .79rem; }
+      .room-map { display: grid; grid-template-columns: repeat(auto-fit, minmax(205px, 1fr)); gap: 11px; }
+      .room-map-card {
+        position: relative;
+        display: flex;
+        min-width: 0;
+        min-height: 244px;
+        flex-direction: column;
+        padding: 14px;
+        overflow: hidden;
+        border: 1px solid #d8e7f0;
+        border-radius: 14px;
+        background: rgba(255,255,255,.9);
+        box-shadow: 0 7px 15px rgba(40, 85, 116, .055);
+        transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+      }
+      .room-map-card:hover { border-color: #a8d1e9; box-shadow: 0 12px 21px rgba(33, 100, 139, .11); transform: translateY(-2px); }
+      .room-map-card::before { position: absolute; top: 0; left: 0; width: 100%; height: 4px; content: ''; background: var(--blue); }
+      .room-map-tone-2::before { background: #52a5d2; }
+      .room-map-tone-3::before { background: #8f8fc4; }
+      .room-map-tone-4::before { background: #c79554; }
+      .room-map-tone-5::before { background: #34a47d; }
+      .room-map-card-head { display: flex; align-items: center; gap: 7px; min-height: 26px; }
+      .room-map-icon { display: grid; width: 26px; height: 26px; flex: 0 0 auto; place-items: center; border-radius: 8px; background: #e8f5fc; color: #24729e; font-size: .88rem; font-weight: 900; }
+      .room-map-type { overflow: hidden; color: #638097; font-size: .68rem; font-weight: 850; letter-spacing: .04em; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+      .room-map-state { margin-left: auto; padding: 4px 6px; border-radius: 999px; font-size: .61rem; font-weight: 850; white-space: nowrap; }
+      .room-map-state.is-empty { background: #eef4f8; color: #6b8294; }
+      .room-map-state.is-pending { background: #fff5df; color: #9a6818; }
+      .room-map-state.is-conflict { background: #fff0f2; color: #b84250; }
+      .room-map-state.is-ready { background: #e6f7f1; color: #1d8465; }
+      .room-map-card h3 { margin: 13px 0 1px; overflow: hidden; color: #213f57; font-size: .95rem; letter-spacing: -.015em; text-overflow: ellipsis; white-space: nowrap; }
+      .room-map-area { margin: 0; color: #8396a5; font-size: .69rem; }
+      .room-map-load { margin-top: 13px; padding-top: 10px; border-top: 1px solid #e5edf3; }
+      .room-map-load > div { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; color: #70869a; font-size: .68rem; }
+      .room-map-load strong { color: #1f6189; font-size: .8rem; }
+      .room-map-load-track { display: block; height: 5px; overflow: hidden; margin-top: 6px; border-radius: 999px; background: #e5f0f6; }
+      .room-map-load-track i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #2b91cc, #71c6ea); }
+      .room-map-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 11px; }
+      .room-map-tags span { max-width: 100%; overflow: hidden; padding: 4px 6px; border-radius: 6px; background: #f0f7fb; color: #5b778c; font-size: .62rem; font-weight: 750; text-overflow: ellipsis; white-space: nowrap; }
+      .room-map-note { display: -webkit-box; overflow: hidden; min-height: 33px; margin: 11px 0 0; color: #687f91; font-size: .7rem; line-height: 1.42; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+      .room-map-actions { display: flex; align-items: center; gap: 8px; margin-top: auto; padding-top: 12px; }
+      .room-map-actions .button { min-height: 31px; padding: 5px 8px; font-size: .68rem; }
+      .room-map-edit { padding: 5px 1px; border: 0; background: transparent; color: #36769e; font-size: .69rem; font-weight: 850; }
+      .room-map-edit:hover { color: #0e5a89; text-decoration: underline; }
+      .room-map-empty { display: grid; min-height: 188px; place-content: center; justify-items: center; padding: 24px; border: 1px dashed #abc7da; border-radius: 14px; background: rgba(255,255,255,.64); color: #6f8799; text-align: center; }
+      .room-map-empty > span { display: grid; width: 38px; height: 38px; place-items: center; border-radius: 12px; background: #e4f3fc; color: #2478a9; font-size: 1.1rem; }
+      .room-map-empty strong { margin-top: 10px; color: #36566d; font-size: .88rem; }
+      .room-map-empty p { max-width: 390px; margin: 4px 0 13px; font-size: .76rem; }
+      .room-map-footnote { margin: 13px 0 0; padding-top: 12px; border-top: 1px solid #dcebf3; color: #748b9d; font-size: .71rem; line-height: 1.42; }
+
       .metrics {
         display: grid;
         grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -490,7 +570,7 @@
 
       .field { display: grid; gap: 6px; }
       .field label { color: #56667d; font-size: .76rem; font-weight: 750; }
-      .field input, .field select {
+      .field input, .field select, .field textarea {
         width: 100%;
         min-height: 42px;
         padding: 9px 10px;
@@ -500,8 +580,9 @@
         color: #1c2d41;
         outline: none;
       }
-      .field input:focus, .field select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(22,119,200,.12); }
-      .field input:disabled, .field select:disabled { border-color: #d8e0e8; background: #f4f7fa; color: #77879a; cursor: not-allowed; }
+      .field textarea { min-height: 82px; resize: vertical; }
+      .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(22,119,200,.12); }
+      .field input:disabled, .field select:disabled, .field textarea:disabled { border-color: #d8e0e8; background: #f4f7fa; color: #77879a; cursor: not-allowed; }
 
       .table-wrap { overflow-x: auto; }
       table { width: 100%; border-collapse: collapse; min-width: 900px; }
@@ -771,6 +852,8 @@
         .project-journey { grid-template-columns: 1fr; gap: 15px; padding: 19px 18px 16px; }
         .journey-action-panel { min-height: 0; }
         .journey-stages { grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: visible; padding-bottom: 0; }
+        .room-map-section { padding: 19px 18px 15px; }
+        .room-map { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       }
 
       @media (max-width: 460px) {
@@ -790,12 +873,15 @@
         .hero-float { display: none; }
         .journey-stages { grid-template-columns: 1fr; }
         .journey-stage { padding: 8px; }
+        .room-map-header { align-items: flex-start; flex-direction: column; }
+        .room-map { grid-template-columns: 1fr; }
+        .room-map-card { min-height: 0; }
       }
 
       @media print {
         @page { margin: 12mm; }
         body { min-width: 0; background: #ffffff; color: #172235; font-size: 11px; }
-        .sidebar, .header-actions, .button, .row-actions, .project-save-actions, .modal-backdrop, .toast, .visual-hero, .project-journey, .visual-reference-card { display: none !important; }
+        .sidebar, .header-actions, .button, .row-actions, .project-save-actions, .modal-backdrop, .toast, .visual-hero, .project-journey, .visual-reference-card, .room-map-edit { display: none !important; }
         .app-shell, .work-grid { display: block; min-height: 0; }
         .main { padding: 0; }
         .topbar { display: block; margin-bottom: 10px; }
@@ -809,6 +895,7 @@
         .card-header, .card-body, .board-body { padding: 10px 12px; }
         .project-card { display: none; }
         .project-tools { display: none; }
+        .room-map-actions { display: none; }
         .table-wrap { overflow: visible; }
         table { min-width: 0; }
         th, td { padding: 7px 8px; font-size: .72rem; }
@@ -839,7 +926,7 @@
         </nav>
 
         <div class="side-footer">
-          <strong>Produto v0.11</strong><br>
+          <strong>Produto v0.12</strong><br>
           Anteprojeto revisável · Brasil
         </div>
       </aside>
@@ -897,6 +984,19 @@
             <button class="button button-primary" id="journey-action" type="button">Continuar</button>
           </div>
           <ol class="journey-stages" id="journey-steps" aria-label="Etapas do anteprojeto"></ol>
+        </section>
+
+        <section class="room-map-section" aria-labelledby="room-map-title">
+          <div class="room-map-header">
+            <div>
+              <p class="room-map-kicker">Leitura por ambiente</p>
+              <h2 id="room-map-title">Mapa do imóvel</h2>
+              <p id="room-map-summary">—</p>
+            </div>
+            <span class="status-pill" id="room-map-status" style="background:#edf7ff;color:#1677ad">—</span>
+          </div>
+          <div class="room-map" id="room-map"></div>
+          <p class="room-map-footnote">Esta é uma leitura visual do cadastro, não uma planta arquitetônica ou um projeto executivo. Use as observações para registrar decisões de campo e pendências de cada ambiente.</p>
         </section>
 
         <section class="metrics" aria-label="Resumo do projeto">
@@ -1198,6 +1298,10 @@
             <div class="field">
               <label for="room-area">Área aproximada (m²)</label>
               <input id="room-area" type="number" min="0.01" step="0.01" placeholder="Opcional">
+            </div>
+            <div class="field wide">
+              <label for="room-notes">Observações de campo</label>
+              <textarea id="room-notes" rows="3" maxlength="600" placeholder="Ex.: posição prevista para TV, bancada, ar-condicionado ou uma pendência a conferir."></textarea>
             </div>
           </div>
           <p class="form-help" id="room-form-help">A área é apenas descritiva nesta etapa. Regras de quantidade mínima de pontos ainda não são inferidas pelo sistema.</p>

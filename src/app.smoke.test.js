@@ -62,6 +62,10 @@ assert.equal(getElementById('journey-action').textContent, 'Organizar 4 pontos')
 assert.match(getElementById('journey-action-title').textContent, /Vincule as cargas/);
 assert.match(getElementById('journey-steps').innerHTML, /Ambientes/);
 assert.match(getElementById('journey-steps').innerHTML, /Trajetos/);
+assert.equal(getElementById('room-map-status').textContent, '4 atenções');
+assert.match(getElementById('room-map-summary').textContent, /5 ambientes/);
+assert.match(getElementById('room-map').innerHTML, /Conferir posição para TV, rack e roteador/);
+assert.match(getElementById('room-map').innerHTML, /data-project-action="add-point"/);
 assert.match(getElementById('circuits-body').innerHTML, /Iluminação social/);
 assert.match(getElementById('circuits-body').innerHTML, /1 ponto vinculado/);
 assert.equal(getElementById('installation-status').textContent, '0 de 6 completos');
