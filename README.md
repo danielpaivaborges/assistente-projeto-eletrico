@@ -61,6 +61,8 @@ O comando atualiza os arquivos de navegador em `dist/` e executa os testes do mo
 
 Todo envio para a branch `main` valida o aplicativo e publica a pasta `dist/` no GitHub Pages. O fluxo tambem pode ser iniciado manualmente na aba **Actions** do repositorio.
 
+Antes da primeira publicacao, o administrador do repositorio precisa selecionar **Settings → Pages → Build and deployment → Source: GitHub Actions**. Essa ativacao unica e exigida pelo GitHub; depois dela, as proximas atualizacoes serao publicadas automaticamente.
+
 ## Documentação técnica
 
 - [Motor técnico](docs/MOTOR_TECNICO.md)

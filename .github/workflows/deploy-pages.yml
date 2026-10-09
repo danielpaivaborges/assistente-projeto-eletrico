@@ -26,31 +26,6 @@ jobs:
         with:
           node-version: 24
 
-      - name: Ativar GitHub Pages quando necessario
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const params = {
-              owner: context.repo.owner,
-              repo: context.repo.repo
-            };
-
-            try {
-              const page = await github.rest.repos.getPages(params);
-              if (page.data.build_type !== 'workflow') {
-                await github.rest.repos.updateInformationAboutPagesSite({
-                  ...params,
-                  build_type: 'workflow'
-                });
-              }
-            } catch (error) {
-              if (error.status !== 404) throw error;
-              await github.rest.repos.createPagesSite({
-                ...params,
-                build_type: 'workflow'
-              });
-            }
-
       - name: Preparar GitHub Pages
         uses: actions/configure-pages@v5
 
