@@ -13,7 +13,7 @@
 }(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  var ENGINE_VERSION = '0.4.0-preliminar';
+  var ENGINE_VERSION = '0.5.0-preliminar';
   var ALL_PHASES = ['A', 'B', 'C'];
   var SUPPLIES = {
     'three-127-220': {
@@ -42,6 +42,11 @@
   function positiveNumber(value) {
     var numeric = Number(value);
     return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
+  }
+
+  function finiteNumber(value) {
+    var numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : null;
   }
 
   function normalizedText(value) {
@@ -310,26 +315,120 @@
     };
   }
 
+  function hasInputValue(value) {
+    return value !== undefined && value !== null && normalizedText(value) !== '';
+  }
+
+  function validateInstallationData(installation) {
+    var source = installation || {};
+    var fields = [
+      { key: 'installationMethod', label: 'método de instalação', kind: 'text' },
+      { key: 'conductorMaterial', label: 'material do condutor', kind: 'text' },
+      { key: 'ambientTemperatureC', label: 'temperatura ambiente', kind: 'number' },
+      { key: 'groupingCount', label: 'agrupamento de circuitos', kind: 'positive-integer' },
+      { key: 'lengthM', label: 'comprimento do trajeto', kind: 'positive-number' },
+      { key: 'protectionContext', label: 'condições de proteção', kind: 'text' }
+    ];
+    var missingInputs = [];
+    var invalidInputs = [];
+    var normalized = {};
+
+    fields.forEach(function (field) {
+      var value = source[field.key];
+
+      if (!hasInputValue(value)) {
+        missingInputs.push(field.label);
+        return;
+      }
+
+      if (field.kind === 'text') {
+        normalized[field.key] = normalizedText(value);
+        return;
+      }
+
+      if (field.kind === 'number') {
+        var numeric = finiteNumber(value);
+        if (numeric === null) invalidInputs.push(field.label);
+        else normalized[field.key] = numeric;
+        return;
+      }
+
+      if (field.kind === 'positive-number') {
+        var positive = positiveNumber(value);
+        if (positive === null) invalidInputs.push(field.label);
+        else normalized[field.key] = positive;
+        return;
+      }
+
+      var integer = Number(value);
+      if (!Number.isInteger(integer) || integer < 1) invalidInputs.push(field.label);
+      else normalized[field.key] = integer;
+    });
+
+    return {
+      valid: missingInputs.length === 0 && invalidInputs.length === 0,
+      missingInputs: missingInputs,
+      invalidInputs: invalidInputs,
+      installation: normalized,
+      rulesetVersion: ENGINE_VERSION
+    };
+  }
+
   function getSizingReadiness(circuit) {
     var current = calculateCurrent(circuit && circuit.power, circuit && circuit.voltage);
-    var installation = circuit && circuit.installation ? circuit.installation : {};
-    var requiredInputs = [
-      { key: 'installationMethod', label: 'método de instalação' },
-      { key: 'conductorMaterial', label: 'material do condutor' },
-      { key: 'ambientTemperatureC', label: 'temperatura ambiente' },
-      { key: 'groupingCount', label: 'agrupamento de circuitos' },
-      { key: 'lengthM', label: 'comprimento do trajeto' },
-      { key: 'protectionContext', label: 'condições de proteção' }
-    ];
-    var missing = requiredInputs
-      .filter(function (input) { return installation[input.key] === undefined || installation[input.key] === null || installation[input.key] === ''; })
-      .map(function (input) { return input.label; });
+    var installationValidation = validateInstallationData(circuit && circuit.installation);
+    var status = 'ready-for-rule-evaluation';
+    var label = 'pronto para regras validadas';
+
+    if (current === null) {
+      status = 'invalid-input';
+      label = 'potência ou tensão inválida';
+    } else if (installationValidation.missingInputs.length) {
+      status = 'pending-installation-data';
+      label = 'dados de instalação pendentes';
+    } else if (installationValidation.invalidInputs.length) {
+      status = 'invalid-installation-data';
+      label = 'dados de instalação inválidos';
+    }
 
     return {
       currentA: current,
-      status: current === null ? 'invalid-input' : (missing.length ? 'pending-installation-data' : 'ready-for-rule-evaluation'),
-      label: current === null ? 'potência ou tensão inválida' : (missing.length ? 'dados de instalação pendentes' : 'pronto para regras validadas'),
-      missingInputs: missing,
+      status: status,
+      label: label,
+      missingInputs: installationValidation.missingInputs,
+      invalidInputs: installationValidation.invalidInputs,
+      installation: installationValidation.installation,
+      rulesetVersion: ENGINE_VERSION
+    };
+  }
+
+  function summarizeInstallationReadiness(circuits) {
+    var summaries = (circuits || []).map(function (circuit, index) {
+      var circuitId = circuit && circuit.id !== undefined ? circuit.id : index;
+      var readiness = getSizingReadiness(circuit);
+
+      return {
+        circuitId: circuitId,
+        status: readiness.status,
+        missingInputs: readiness.missingInputs,
+        invalidInputs: readiness.invalidInputs,
+        installation: readiness.installation
+      };
+    });
+    var totals = summaries.reduce(function (summary, item) {
+      if (item.status === 'ready-for-rule-evaluation') summary.readyCount += 1;
+      else if (item.status === 'invalid-installation-data' || item.status === 'invalid-input') summary.invalidCount += 1;
+      else summary.pendingCount += 1;
+      return summary;
+    }, { circuitCount: summaries.length, readyCount: 0, pendingCount: 0, invalidCount: 0 });
+
+    return {
+      circuits: summaries,
+      byCircuitId: summaries.reduce(function (index, item) {
+        index[item.circuitId] = item;
+        return index;
+      }, {}),
+      totals: totals,
       rulesetVersion: ENGINE_VERSION
     };
   }
@@ -691,12 +790,14 @@
     getSupportedVoltages: getSupportedVoltages,
     getSizingReadiness: getSizingReadiness,
     getPointCircuitTraceability: getPointCircuitTraceability,
+    summarizeInstallationReadiness: summarizeInstallationReadiness,
     suggestPhaseAssignment: suggestPhaseAssignment,
     summarizeProjectInventory: summarizeProjectInventory,
     validateCircuitsForSupply: validateCircuitsForSupply,
     validatePointCircuitLinks: validatePointCircuitLinks,
     validatePoint: validatePoint,
     validateProjectInventory: validateProjectInventory,
-    validateRoom: validateRoom
+    validateRoom: validateRoom,
+    validateInstallationData: validateInstallationData
   };
 }));

@@ -156,3 +156,56 @@ test('detecta ponto vinculado a mais de um circuito', () => {
   assert.equal(validation.valid, false);
   assert.ok(validation.issues.some((issue) => issue.code === 'point-linked-to-multiple-circuits'));
 });
+
+test('valida os dados físicos mínimos antes de liberar regras técnicas', () => {
+  const validation = engine.validateInstallationData({
+    installationMethod: 'Eletroduto embutido',
+    conductorMaterial: 'Cobre',
+    ambientTemperatureC: 30,
+    groupingCount: 1,
+    lengthM: 18.5,
+    protectionContext: 'Proteção a definir no projeto executivo'
+  });
+
+  assert.equal(validation.valid, true);
+  assert.deepEqual(validation.installation, {
+    installationMethod: 'Eletroduto embutido',
+    conductorMaterial: 'Cobre',
+    ambientTemperatureC: 30,
+    groupingCount: 1,
+    lengthM: 18.5,
+    protectionContext: 'Proteção a definir no projeto executivo'
+  });
+});
+
+test('resume a prontidão de instalação de cada circuito', () => {
+  const summary = engine.summarizeInstallationReadiness([
+    {
+      id: 'pronto', power: 2200, voltage: 220,
+      installation: {
+        installationMethod: 'Eletroduto embutido',
+        conductorMaterial: 'Cobre',
+        ambientTemperatureC: 30,
+        groupingCount: 1,
+        lengthM: 18,
+        protectionContext: 'Proteção a definir no projeto executivo'
+      }
+    },
+    { id: 'pendente', power: 1000, voltage: 127 },
+    {
+      id: 'invalido', power: 1000, voltage: 127,
+      installation: {
+        installationMethod: 'Canaleta',
+        conductorMaterial: 'Cobre',
+        ambientTemperatureC: 30,
+        groupingCount: 0,
+        lengthM: 8,
+        protectionContext: 'Circuito terminal'
+      }
+    }
+  ]);
+
+  assert.deepEqual(summary.totals, { circuitCount: 3, readyCount: 1, pendingCount: 1, invalidCount: 1 });
+  assert.equal(summary.byCircuitId.pronto.status, 'ready-for-rule-evaluation');
+  assert.equal(summary.byCircuitId.invalido.status, 'invalid-installation-data');
+});

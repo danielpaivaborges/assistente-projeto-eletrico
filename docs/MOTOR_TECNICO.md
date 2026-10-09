@@ -16,6 +16,8 @@ O motor está em estado **preliminar**. Ele separa a lógica de cálculo da inte
 - Resumo de pontos e potência prevista por ambiente, sem inferir quantitativos normativos.
 - Criação de circuito a partir de pontos da mesma tensão, com potência somada e fase sugerida.
 - Rastreabilidade entre ponto e circuito, incluindo detecção de ponto duplicado ou inexistente.
+- Validação dos dados físicos mínimos de instalação por circuito: método, material, temperatura ambiente, agrupamento, comprimento e contexto de proteção.
+- Resumo de prontidão por circuito para indicar quando os dados podem seguir para uma futura regra técnica validada.
 
 ## O que ainda não dimensiona
 
@@ -26,7 +28,7 @@ O motor está em estado **preliminar**. Ele separa a lógica de cálculo da inte
 - Curto-circuito, seletividade, coordenação ou aterramento.
 - Quantitativos de cabos e eletrodutos.
 
-Essas decisões dependem, entre outros fatores, de método de instalação, material do condutor, temperatura, agrupamento, percurso, proteção e dados da concessionária. O sistema registra esses campos como pendentes em vez de preencher valores aparentemente definitivos.
+Essas decisões dependem, entre outros fatores, de método de instalação, material do condutor, temperatura, agrupamento, percurso, proteção e dados da concessionária. O sistema agora valida e registra os campos mínimos de percurso, mas não os converte em bitola, proteção ou queda de tensão enquanto as regras não estiverem documentadas e testadas.
 
 ## Regra de segurança do produto
 

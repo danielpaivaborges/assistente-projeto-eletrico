@@ -411,6 +411,14 @@
       .point-circuit-selection { margin: 12px 0 0; padding: 10px 11px; border-radius: 9px; background: #eef8ff; color: #38617a; font-size: .76rem; }
       .point-circuit-empty { margin: 0; padding: 12px; border: 1px dashed #b9c9d7; border-radius: 9px; color: #728196; font-size: .78rem; text-align: center; }
 
+      .installation-list { display: grid; gap: 9px; }
+      .installation-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: start; padding: 12px; border: 1px solid #e0e9f1; border-radius: 11px; background: #fbfdff; }
+      .installation-name { display: block; color: #244059; font-size: .84rem; font-weight: 850; }
+      .installation-meta { display: block; margin-top: 3px; color: #687a8e; font-size: .75rem; }
+      .installation-progress { display: block; margin-top: 5px; color: #8694a4; font-size: .72rem; }
+      .installation-state { display: inline-flex; align-items: center; min-height: 27px; padding: 5px 8px; border-radius: 999px; font-size: .69rem; font-weight: 850; white-space: nowrap; }
+      .installation-note { margin: 15px 0 0; padding-top: 13px; border-top: 1px solid #e8eef4; color: #738295; font-size: .75rem; }
+
       .modal-backdrop {
         position: fixed;
         z-index: 10;
@@ -476,6 +484,7 @@
         .project-configuration, .form-grid, .side-stack, .inventory-grid { grid-template-columns: 1fr; }
         .form-grid .wide, .side-stack .card:last-child { grid-column: auto; }
         .inventory-column + .inventory-column { padding-top: 16px; padding-left: 0; border-top: 1px solid #e5edf4; border-left: 0; }
+        .installation-row { grid-template-columns: 1fr; gap: 8px; }
       }
 
       @media (max-width: 460px) {
@@ -510,7 +519,7 @@
         </nav>
 
         <div class="side-footer">
-          <strong>Base de regras v0.4</strong><br>
+          <strong>Base de regras v0.5</strong><br>
           Anteprojeto revisável · Brasil
         </div>
       </aside>
@@ -653,6 +662,23 @@
                   </thead>
                   <tbody id="circuits-body"></tbody>
                 </table>
+              </div>
+            </article>
+
+            <article class="card">
+              <div class="card-header">
+                <div>
+                  <h2>Trajetos e condições de instalação</h2>
+                  <p>Dados reais a coletar antes de aplicar regras de dimensionamento.</p>
+                </div>
+                <div class="circuit-card-actions">
+                  <span class="status-pill" id="installation-status" style="background:#fff6dd;color:#9b6615">—</span>
+                  <button class="button button-secondary button-compact" type="button" id="add-installation-data">＋ Informar dados</button>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="installation-list" id="installation-list"></div>
+                <p class="installation-note">O sistema registra os dados de campo, mas ainda não calcula queda de tensão nem seleciona condutores ou proteções. Essas regras serão liberadas somente após validação técnica.</p>
               </div>
             </article>
 
@@ -862,6 +888,66 @@
           <div class="modal-actions">
             <button class="button button-secondary" type="button" id="cancel-point-circuit-modal">Cancelar</button>
             <button class="button button-primary" type="submit">Criar circuito</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="installation-modal" role="dialog" aria-modal="true" aria-labelledby="installation-modal-title">
+      <div class="modal" style="width:min(100%,620px)">
+        <div class="modal-header">
+          <div>
+            <h2 id="installation-modal-title">Informar trajeto e instalação</h2>
+            <p>Registre as condições mínimas antes de liberar regras técnicas de dimensionamento.</p>
+          </div>
+          <button class="close-button" type="button" id="close-installation-modal" aria-label="Fechar">×</button>
+        </div>
+        <form id="installation-form">
+          <div class="form-grid">
+            <div class="field wide">
+              <label for="installation-circuit">Circuito</label>
+              <select id="installation-circuit" required></select>
+            </div>
+            <div class="field">
+              <label for="installation-method">Método de instalação</label>
+              <select id="installation-method" required>
+                <option value="">Selecione</option>
+                <option>Eletroduto embutido em alvenaria</option>
+                <option>Eletroduto aparente</option>
+                <option>Canaleta</option>
+                <option>Outro / a detalhar</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="installation-conductor-material">Material do condutor</label>
+              <select id="installation-conductor-material" required>
+                <option value="">Selecione</option>
+                <option>Cobre</option>
+                <option>Alumínio</option>
+                <option>Outro / a confirmar</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="installation-length">Comprimento do trajeto (m)</label>
+              <input id="installation-length" type="number" min="0.01" step="0.1" required placeholder="Ex.: 18,5">
+            </div>
+            <div class="field">
+              <label for="installation-temperature">Temperatura ambiente (°C)</label>
+              <input id="installation-temperature" type="number" step="0.1" required placeholder="Ex.: 30">
+            </div>
+            <div class="field">
+              <label for="installation-grouping">Circuitos agrupados</label>
+              <input id="installation-grouping" type="number" min="1" step="1" value="1" required>
+            </div>
+            <div class="field">
+              <label for="installation-protection-context">Condições de proteção</label>
+              <input id="installation-protection-context" required placeholder="Ex.: circuito terminal; proteção a definir">
+            </div>
+          </div>
+          <p class="form-help">Este registro não define bitola, disjuntor ou proteção. Ele apenas prepara dados rastreáveis para regras que ainda precisam ser validadas.</p>
+          <div class="modal-actions">
+            <button class="button button-secondary" type="button" id="cancel-installation-modal">Cancelar</button>
+            <button class="button button-primary" type="submit">Salvar dados</button>
           </div>
         </form>
       </div>

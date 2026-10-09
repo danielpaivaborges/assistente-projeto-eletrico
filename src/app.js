@@ -68,13 +68,17 @@
     pointsList: document.getElementById('points-list'),
     inventorySummary: document.getElementById('inventory-summary'),
     inventoryStatus: document.getElementById('inventory-status'),
+    installationList: document.getElementById('installation-list'),
+    installationStatus: document.getElementById('installation-status'),
     circuitModal: document.getElementById('circuit-modal'),
     pointCircuitModal: document.getElementById('point-circuit-modal'),
+    installationModal: document.getElementById('installation-modal'),
     roomModal: document.getElementById('room-modal'),
     pointModal: document.getElementById('point-modal'),
     toast: document.getElementById('toast'),
     circuitForm: document.getElementById('circuit-form'),
     pointCircuitForm: document.getElementById('point-circuit-form'),
+    installationForm: document.getElementById('installation-form'),
     roomForm: document.getElementById('room-form'),
     pointForm: document.getElementById('point-form'),
     projectName: document.getElementById('project-name'),
@@ -86,6 +90,13 @@
     pointRoom: document.getElementById('point-room'),
     pointCircuitOptions: document.getElementById('point-circuit-options'),
     pointCircuitSelection: document.getElementById('point-circuit-selection'),
+    installationCircuit: document.getElementById('installation-circuit'),
+    installationMethod: document.getElementById('installation-method'),
+    installationConductorMaterial: document.getElementById('installation-conductor-material'),
+    installationLength: document.getElementById('installation-length'),
+    installationTemperature: document.getElementById('installation-temperature'),
+    installationGrouping: document.getElementById('installation-grouping'),
+    installationProtectionContext: document.getElementById('installation-protection-context'),
     phaseCLegend: document.getElementById('phase-c-legend')
   };
   var activeSupplyKey = elements.supplyType.value;
@@ -117,6 +128,12 @@
     return value.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' A';
   }
 
+  function formatLength(value) {
+    var number = Number(value);
+    if (!Number.isFinite(number) || number <= 0) return null;
+    return number.toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' m';
+  }
+
   function phaseClass(phase) {
     if (phase === 'A') return 'phase-a';
     if (phase === 'B') return 'phase-b';
@@ -133,7 +150,7 @@
   }
 
   function getCircuitName(circuitId) {
-    var circuit = circuits.filter(function (item) { return item.id === circuitId; })[0];
+    var circuit = circuits.filter(function (item) { return String(item.id) === String(circuitId); })[0];
     return circuit ? circuit.name : 'Circuito não localizado';
   }
 
@@ -311,10 +328,62 @@
     elements.inventorySummary.textContent = totals.pointCount + ' pontos cadastrados · ' + formatPower(totals.plannedPowerW) + ' de potência prevista · ' + traceability.totals.linkedPointCount + ' ponto(s) já vinculados a circuitos.';
   }
 
+  function installationStatusView(status) {
+    if (status === 'ready-for-rule-evaluation') {
+      return { label: 'pronto para regras', background: '#e6f7f1', color: '#188868' };
+    }
+
+    if (status === 'invalid-installation-data' || status === 'invalid-input') {
+      return { label: 'dados a corrigir', background: '#fff0f2', color: '#be3d4c' };
+    }
+
+    return { label: 'dados pendentes', background: '#fff6dd', color: '#9b6615' };
+  }
+
+  function renderInstallation() {
+    var summary = engine.summarizeInstallationReadiness(circuits);
+    var totals = summary.totals;
+
+    elements.installationStatus.textContent = totals.readyCount + ' de ' + totals.circuitCount + ' completos';
+    elements.installationStatus.style.background = totals.invalidCount ? '#fff0f2' : totals.readyCount === totals.circuitCount && totals.circuitCount ? '#e6f7f1' : '#fff6dd';
+    elements.installationStatus.style.color = totals.invalidCount ? '#be3d4c' : totals.readyCount === totals.circuitCount && totals.circuitCount ? '#188868' : '#9b6615';
+
+    elements.installationList.innerHTML = circuits.map(function (circuit) {
+      var readiness = summary.byCircuitId[circuit.id];
+      var status = installationStatusView(readiness.status);
+      var installation = circuit.installation || {};
+      var routeDetails = [
+        formatLength(installation.lengthM),
+        installation.installationMethod,
+        installation.conductorMaterial
+      ].filter(Boolean);
+      var detail = routeDetails.length
+        ? routeDetails.join(' · ')
+        : 'Trajeto e condições de instalação ainda não informados.';
+      var pending = readiness.missingInputs.length
+        ? 'Falta: ' + readiness.missingInputs.slice(0, 2).join(' · ')
+        : '';
+      var invalid = readiness.invalidInputs.length
+        ? 'Corrija: ' + readiness.invalidInputs.join(' · ')
+        : '';
+      var progress = readiness.status === 'ready-for-rule-evaluation'
+        ? 'Dados mínimos coletados; regras técnicas ainda serão validadas.'
+        : invalid || pending;
+
+      return '<div class="installation-row">' +
+        '<div><span class="installation-name">' + escapeHtml(circuit.name) + '</span>' +
+        '<span class="installation-meta">' + escapeHtml(detail) + '</span>' +
+        '<span class="installation-progress">' + escapeHtml(progress) + '</span></div>' +
+        '<span class="installation-state" style="background:' + status.background + ';color:' + status.color + '">' + escapeHtml(status.label) + '</span>' +
+        '</div>';
+    }).join('');
+  }
+
   function render() {
     renderProjectTitle();
     renderInventory();
     renderCircuits();
+    renderInstallation();
     renderMetrics();
     renderBalance();
     renderBoard();
@@ -424,11 +493,58 @@
     elements.pointCircuitForm.reset();
   }
 
+  function selectedInstallationCircuit() {
+    return circuits.filter(function (circuit) {
+      return String(circuit.id) === String(elements.installationCircuit.value);
+    })[0];
+  }
+
+  function updateInstallationCircuitOptions() {
+    var selected = elements.installationCircuit.value;
+
+    elements.installationCircuit.innerHTML = circuits.map(function (circuit) {
+      return '<option value="' + escapeHtml(circuit.id) + '">' + escapeHtml(circuit.name) + ' · ' + circuit.voltage + ' V</option>';
+    }).join('');
+    elements.installationCircuit.value = circuits.some(function (circuit) {
+      return String(circuit.id) === String(selected);
+    }) ? selected : (circuits[0] ? String(circuits[0].id) : '');
+  }
+
+  function fillInstallationForm() {
+    var circuit = selectedInstallationCircuit();
+    var installation = circuit && circuit.installation ? circuit.installation : {};
+
+    elements.installationMethod.value = installation.installationMethod || '';
+    elements.installationConductorMaterial.value = installation.conductorMaterial || '';
+    elements.installationLength.value = installation.lengthM !== undefined ? installation.lengthM : '';
+    elements.installationTemperature.value = installation.ambientTemperatureC !== undefined ? installation.ambientTemperatureC : '';
+    elements.installationGrouping.value = installation.groupingCount !== undefined ? installation.groupingCount : '1';
+    elements.installationProtectionContext.value = installation.protectionContext || '';
+  }
+
+  function openInstallationModal() {
+    if (!circuits.length) {
+      toast('Cadastre ao menos um circuito antes de informar seus dados de instalação.');
+      return;
+    }
+
+    updateInstallationCircuitOptions();
+    fillInstallationForm();
+    elements.installationModal.classList.add('open');
+    window.setTimeout(function () { elements.installationCircuit.focus(); }, 60);
+  }
+
+  function closeInstallationModal() {
+    elements.installationModal.classList.remove('open');
+    elements.installationForm.reset();
+  }
+
   function closeAllModals() {
     closeCircuitModal();
     closeRoomModal();
     closePointModal();
     closePointCircuitModal();
+    closeInstallationModal();
   }
 
   function fillVoltageOptions(control) {
@@ -472,11 +588,14 @@
 
   document.getElementById('add-circuit-secondary').addEventListener('click', openCircuitModal);
   document.getElementById('create-circuit-from-points').addEventListener('click', openPointCircuitModal);
+  document.getElementById('add-installation-data').addEventListener('click', openInstallationModal);
   document.getElementById('add-point-primary').addEventListener('click', openPointModal);
   document.getElementById('close-modal').addEventListener('click', closeCircuitModal);
   document.getElementById('cancel-modal').addEventListener('click', closeCircuitModal);
   document.getElementById('close-point-circuit-modal').addEventListener('click', closePointCircuitModal);
   document.getElementById('cancel-point-circuit-modal').addEventListener('click', closePointCircuitModal);
+  document.getElementById('close-installation-modal').addEventListener('click', closeInstallationModal);
+  document.getElementById('cancel-installation-modal').addEventListener('click', closeInstallationModal);
   document.getElementById('add-room-button').addEventListener('click', openRoomModal);
   document.getElementById('add-point-button').addEventListener('click', openPointModal);
   document.getElementById('close-room-modal').addEventListener('click', closeRoomModal);
@@ -491,6 +610,9 @@
   });
   elements.pointCircuitModal.addEventListener('click', function (event) {
     if (event.target === elements.pointCircuitModal) closePointCircuitModal();
+  });
+  elements.installationModal.addEventListener('click', function (event) {
+    if (event.target === elements.installationModal) closeInstallationModal();
   });
   elements.roomModal.addEventListener('click', function (event) {
     if (event.target === elements.roomModal) closeRoomModal();
@@ -553,6 +675,38 @@
     closePointCircuitModal();
     render();
     toast('Circuito criado com ' + result.circuit.pointIds.length + ' ponto(s) e fase ' + result.circuit.phase + '. Revise antes de executar.');
+  });
+
+  elements.installationCircuit.addEventListener('change', fillInstallationForm);
+
+  elements.installationForm.addEventListener('submit', function (event) {
+    event.preventDefault();
+
+    var circuit = selectedInstallationCircuit();
+    if (!circuit) {
+      toast('Selecione um circuito para registrar os dados de instalação.');
+      return;
+    }
+
+    var validation = engine.validateInstallationData({
+      installationMethod: elements.installationMethod.value,
+      conductorMaterial: elements.installationConductorMaterial.value,
+      lengthM: elements.installationLength.value,
+      ambientTemperatureC: elements.installationTemperature.value,
+      groupingCount: elements.installationGrouping.value,
+      protectionContext: elements.installationProtectionContext.value
+    });
+
+    if (!validation.valid) {
+      var issues = validation.invalidInputs.length ? validation.invalidInputs : validation.missingInputs;
+      toast('Confira os dados de instalação: ' + issues.join(', ') + '.');
+      return;
+    }
+
+    circuit.installation = validation.installation;
+    closeInstallationModal();
+    render();
+    toast('Dados do circuito registrados. Condutor e proteção continuam bloqueados até a validação das regras técnicas.');
   });
 
   elements.roomForm.addEventListener('submit', function (event) {
