@@ -2,7 +2,7 @@
 
 Ferramenta em construção para organizar anteprojetos de instalações elétricas residenciais no Brasil.
 
-> Estado atual: **v0.7 — projeto persistente no navegador**. A aplicação organiza o imóvel, as cargas, os circuitos e as condições de instalação; também destaca inconsistências, salva o anteprojeto neste navegador e não recomenda condutor ou proteção.
+> Estado atual: **v0.8 — backup e relatório do anteprojeto**. A aplicação organiza o imóvel, as cargas, os circuitos e as condições de instalação; salva localmente, gera backup portátil, importa cópias compatíveis e imprime um relatório de conferência sem recomendar condutor ou proteção.
 
 ## O que já funciona
 
@@ -15,6 +15,8 @@ Ferramenta em construção para organizar anteprojetos de instalações elétric
 - Conferência de rastreabilidade entre pontos, circuitos, alimentação e inventário, sem impor critérios normativos.
 - Salvamento automático local do projeto no navegador, com restauração ao reabrir a página.
 - Restauração consciente do modelo de exemplo, protegida por confirmação.
+- Exportação de backup em JSON e importação confirmada de arquivos compatíveis.
+- Relatório imprimível do anteprojeto, com cargas, circuitos, trajetos, revisão e quadro visual.
 - Corrente nominal estimada por potência e tensão.
 - Visualização de corrente por fase.
 - Redistribuição heurística apenas de circuitos monofásicos; cargas entre fases são preservadas.
@@ -30,7 +32,7 @@ Os resultados não substituem projeto, responsabilidade técnica ou validação 
 
 ## Dados do projeto
 
-Nesta etapa, os dados são salvos apenas no armazenamento local do navegador em uso. Eles não são enviados para um servidor. Limpar os dados do navegador, usar outro dispositivo ou abrir em navegação anônima pode remover esse projeto; a exportação de backup será uma etapa futura.
+Nesta etapa, os dados são salvos apenas no armazenamento local do navegador em uso. Eles não são enviados para um servidor. Limpar os dados do navegador, usar outro dispositivo ou abrir em navegação anônima pode remover esse projeto; exporte um backup antes de qualquer limpeza ou troca de dispositivo.
 
 ## Estrutura
 
@@ -59,7 +61,7 @@ O comando atualiza os arquivos de navegador em `dist/` e executa os testes do mo
 
 ## Próximas etapas
 
-1. Permitir exportação e importação explícita de backup do anteprojeto.
+1. Permitir edição e exclusão rastreável de ambientes, pontos e circuitos já cadastrados.
 2. Registrar fontes, edição e casos de teste antes de introduzir qualquer regra técnica.
 3. Avaliar queda de tensão somente após validar as regras e os dados necessários.
-4. Gerar relatório de anteprojeto rastreável, incluindo revisão, ambientes, pontos, trajetos e quadro.
+4. Evoluir o relatório para um documento exportável com histórico de revisões.

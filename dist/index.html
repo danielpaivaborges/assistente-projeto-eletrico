@@ -251,6 +251,11 @@
       .card-header p { margin: 3px 0 0; color: var(--muted); font-size: .82rem; }
       .card-body { padding: 18px 19px; }
       .project-save-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; }
+      .project-tools { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 16px; padding-top: 15px; border-top: 1px solid #e8eef4; }
+      .project-tools strong { display: block; color: #2b465e; font-size: .8rem; }
+      .project-tools span { display: block; margin-top: 2px; color: #748397; font-size: .73rem; }
+      .project-tools-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+      .print-only { display: none; }
 
       .project-configuration {
         display: grid;
@@ -496,6 +501,8 @@
         .inventory-column + .inventory-column { padding-top: 16px; padding-left: 0; border-top: 1px solid #e5edf4; border-left: 0; }
         .installation-row { grid-template-columns: 1fr; gap: 8px; }
         .review-row { grid-template-columns: 1fr; gap: 7px; }
+        .project-tools { align-items: flex-start; flex-direction: column; }
+        .project-tools-actions { justify-content: flex-start; }
       }
 
       @media (max-width: 460px) {
@@ -505,6 +512,30 @@
         .card-header, .card-body, .board-body { padding-left: 14px; padding-right: 14px; }
         .header-actions { flex-direction: column; }
         .header-actions .button { width: 100%; }
+      }
+
+      @media print {
+        @page { margin: 12mm; }
+        body { min-width: 0; background: #ffffff; color: #172235; font-size: 11px; }
+        .sidebar, .header-actions, .button, .project-save-actions, .modal-backdrop, .toast { display: none !important; }
+        .app-shell, .work-grid { display: block; min-height: 0; }
+        .main { padding: 0; }
+        .topbar { display: block; margin-bottom: 10px; }
+        .print-only { display: block; margin: 0 0 4px; color: #486078; font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+        .notice { margin-bottom: 10px; }
+        .metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 10px; }
+        .metric { min-height: 0; padding: 10px; box-shadow: none; }
+        .metric .value { font-size: 1.18rem; }
+        .stack, .side-stack { display: block; }
+        .card { margin: 0 0 10px; overflow: visible; border-radius: 10px; box-shadow: none; break-inside: avoid; }
+        .card-header, .card-body, .board-body { padding: 10px 12px; }
+        .project-card { display: none; }
+        .project-tools { display: none; }
+        .table-wrap { overflow: visible; }
+        table { min-width: 0; }
+        th, td { padding: 7px 8px; font-size: .72rem; }
+        .installation-list, .review-list { max-height: none; overflow: visible; }
+        .board-rail { overflow: visible; flex-wrap: wrap; }
       }
     </style>
   </head>
@@ -530,7 +561,7 @@
         </nav>
 
         <div class="side-footer">
-          <strong>Produto v0.7</strong><br>
+          <strong>Produto v0.8</strong><br>
           Anteprojeto revisável · Brasil
         </div>
       </aside>
@@ -539,7 +570,9 @@
         <header class="topbar">
           <div>
             <p class="eyebrow">Anteprojeto residencial</p>
+            <p class="print-only">Relatório de anteprojeto</p>
             <h1 id="project-title">Casa Modelo · 127/220 V</h1>
+            <p class="print-only" id="print-report-meta">—</p>
             <p class="project-subtitle">Organize as decisões primeiro; valide as regras técnicas antes da execução.</p>
           </div>
           <div class="header-actions">
@@ -578,7 +611,7 @@
 
         <div class="work-grid">
           <section class="stack">
-            <article class="card">
+            <article class="card project-card">
               <div class="card-header">
                 <div>
                   <h2>Dados do projeto</h2>
@@ -613,6 +646,18 @@
                     </select>
                   </div>
                 </div>
+                <div class="project-tools">
+                  <div>
+                    <strong>Backup e relatório</strong>
+                    <span>Guarde uma cópia do anteprojeto e gere uma versão para conferência.</span>
+                  </div>
+                  <div class="project-tools-actions">
+                    <button class="button button-secondary button-compact" type="button" id="export-backup">⇩ Exportar backup</button>
+                    <button class="button button-secondary button-compact" type="button" id="import-backup">⇧ Importar backup</button>
+                    <button class="button button-primary button-compact" type="button" id="print-report">▤ Imprimir relatório</button>
+                  </div>
+                </div>
+                <input id="import-project-file" type="file" accept="application/json,.json" hidden>
               </div>
             </article>
 

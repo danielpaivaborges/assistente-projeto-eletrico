@@ -67,5 +67,6 @@ assert.match(getElementById('review-summary').textContent, /5 circuitos manuais/
 assert.match(getElementById('review-list').innerHTML, /Ponto elétrico/);
 assert.match(getElementById('review-list').innerHTML, /registro manual/);
 assert.equal(getElementById('save-status').textContent, 'salvamento indisponível');
+assert.equal(getElementById('print-report-meta').textContent, 'Alimentação: 127/220 V · trifásica · Quadro: 24 módulos DIN');
 
 console.log('✔ interface inicializa com ambientes, pontos e circuitos');

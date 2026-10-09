@@ -1,8 +1,8 @@
 # Persistência local do projeto
 
-## Escopo da v0.7
+## Escopo da v0.8
 
-O anteprojeto é salvo automaticamente no armazenamento local do navegador. Nenhum dado é enviado pelo aplicativo para servidor externo nesta etapa.
+O anteprojeto é salvo automaticamente no armazenamento local do navegador. Nenhum dado é enviado pelo aplicativo para servidor externo nesta etapa. A v0.8 também permite exportar uma cópia em arquivo JSON e importar novamente uma cópia compatível.
 
 ## Chave e conteúdo
 
@@ -17,4 +17,6 @@ O aplicativo só restaura dados cujo formato tenha a versão esperada e as cole�
 - Os dados pertencem ao navegador e ao dispositivo em uso.
 - Limpar os dados do site/navegador, trocar de navegador ou usar uma janela anônima pode tornar o projeto indisponível.
 - A opção **Restaurar modelo** pede confirmação e substitui o projeto local atual.
-- A v0.7 ainda não possui exportação, importação nem sincronização em nuvem.
+- A importação também pede confirmação e substitui o projeto local atual somente depois de validar o formato do arquivo.
+- O backup contém uma marca de formato, uma versão, a data de exportação e os dados do projeto.
+- A v0.8 não possui sincronização em nuvem, colaboração ou histórico de versões remoto.

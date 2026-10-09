@@ -10,6 +10,8 @@
 
   var PROJECT_STORAGE_KEY = 'assistente-projeto-eletrico:projeto:v1';
   var PROJECT_STORAGE_VERSION = 1;
+  var BACKUP_FORMAT = 'assistente-projeto-eletrico-backup';
+  var BACKUP_VERSION = 1;
   var DEFAULT_PROJECT = {
     circuits: [
       { id: 1, name: 'Iluminação social', category: 'Iluminação', voltage: 127, power: 720, phase: 'A' },
@@ -95,6 +97,10 @@
     reviewStatus: document.getElementById('review-status'),
     saveStatus: document.getElementById('save-status'),
     resetProject: document.getElementById('reset-project'),
+    exportBackup: document.getElementById('export-backup'),
+    importBackup: document.getElementById('import-backup'),
+    importProjectFile: document.getElementById('import-project-file'),
+    printReport: document.getElementById('print-report'),
     circuitModal: document.getElementById('circuit-modal'),
     pointCircuitModal: document.getElementById('point-circuit-modal'),
     installationModal: document.getElementById('installation-modal'),
@@ -108,6 +114,7 @@
     pointForm: document.getElementById('point-form'),
     projectName: document.getElementById('project-name'),
     projectTitle: document.getElementById('project-title'),
+    printReportMeta: document.getElementById('print-report-meta'),
     supplyType: document.getElementById('supply-type'),
     boardSize: document.getElementById('board-size'),
     circuitVoltage: document.getElementById('circuit-voltage'),
@@ -149,6 +156,25 @@
       points: value.points.filter(function (item) { return item && typeof item === 'object'; }),
       settings: value.settings
     };
+  }
+
+  function currentProjectData() {
+    return {
+      version: PROJECT_STORAGE_VERSION,
+      settings: {
+        projectName: elements.projectName.value,
+        supplyType: activeSupplyKey,
+        boardSize: elements.boardSize.value
+      },
+      circuits: cloneData(circuits),
+      rooms: cloneData(rooms),
+      points: cloneData(points)
+    };
+  }
+
+  function normalizeBackupDocument(value) {
+    if (!value || value.format !== BACKUP_FORMAT || value.version !== BACKUP_VERSION) return null;
+    return normalizeStoredProject(value.project);
   }
 
   function applyProjectSettings(settings) {
@@ -209,17 +235,7 @@
     }
 
     try {
-      storage.setItem(PROJECT_STORAGE_KEY, JSON.stringify({
-        version: PROJECT_STORAGE_VERSION,
-        settings: {
-          projectName: elements.projectName.value,
-          supplyType: activeSupplyKey,
-          boardSize: elements.boardSize.value
-        },
-        circuits: circuits,
-        rooms: rooms,
-        points: points
-      }));
+      storage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(currentProjectData()));
       setSaveStatus('saved');
       return true;
     } catch (error) {
@@ -243,6 +259,109 @@
     updateVoltageOptions();
     render();
     toast('Modelo de exemplo restaurado e salvo neste navegador.');
+  }
+
+  function backupFilename() {
+    var rawName = (elements.projectName.value || 'projeto-eletrico').trim().toLowerCase();
+    var safeName = rawName.normalize ? rawName.normalize('NFD').replace(/[\u0300-\u036f]/g, '') : rawName;
+    safeName = safeName.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'projeto-eletrico';
+    return safeName + '-backup-' + new Date().toISOString().slice(0, 10) + '.json';
+  }
+
+  function exportProjectBackup() {
+    if (!window.Blob || !window.URL || !window.URL.createObjectURL || !document.createElement || !document.body) {
+      toast('Este navegador não oferece os recursos necessários para gerar o backup.');
+      return;
+    }
+
+    var backup = {
+      format: BACKUP_FORMAT,
+      version: BACKUP_VERSION,
+      exportedAt: new Date().toISOString(),
+      project: currentProjectData()
+    };
+    var blob = new window.Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    var url = window.URL.createObjectURL(blob);
+    var link = document.createElement('a');
+
+    link.href = url;
+    link.download = backupFilename();
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.setTimeout(function () {
+      if (window.URL.revokeObjectURL) window.URL.revokeObjectURL(url);
+    }, 0);
+    toast('Backup do anteprojeto gerado. Guarde o arquivo em local seguro.');
+  }
+
+  function applyImportedProject(project) {
+    circuits = cloneData(project.circuits);
+    rooms = cloneData(project.rooms);
+    points = cloneData(project.points);
+    applyProjectSettings(project.settings);
+    closeAllModals();
+    updateRoomOptions();
+    updateVoltageOptions();
+    render();
+  }
+
+  function importProjectBackup(file, input) {
+    if (!file || !window.FileReader) {
+      toast('Este navegador não conseguiu ler o arquivo de backup.');
+      return;
+    }
+
+    var reader = new window.FileReader();
+    reader.onerror = function () {
+      input.value = '';
+      toast('Não foi possível ler o arquivo selecionado.');
+    };
+    reader.onload = function () {
+      var project = null;
+
+      try {
+        project = normalizeBackupDocument(JSON.parse(String(reader.result || '')));
+      } catch (error) {
+        project = null;
+      }
+
+      input.value = '';
+      if (!project) {
+        toast('O arquivo não é um backup compatível do Assistente de Projeto Elétrico.');
+        return;
+      }
+
+      if (!window.confirm || !window.confirm('Importar este backup? O projeto atual deste navegador será substituído.')) {
+        toast('Importação cancelada; o projeto atual foi preservado.');
+        return;
+      }
+
+      applyImportedProject(project);
+      toast('Backup importado e salvo neste navegador. Revise os dados antes de avançar.');
+    };
+
+    try {
+      reader.readAsText(file);
+    } catch (error) {
+      input.value = '';
+      toast('Não foi possível abrir o arquivo de backup.');
+    }
+  }
+
+  function chooseBackupFile() {
+    elements.importProjectFile.value = '';
+    elements.importProjectFile.click();
+  }
+
+  function printProjectReport() {
+    if (!window.print) {
+      toast('A impressão não está disponível neste navegador.');
+      return;
+    }
+
+    window.print();
   }
 
   restoreStoredProject();
@@ -321,6 +440,7 @@
   function renderProjectTitle() {
     var name = elements.projectName.value.trim() || 'Projeto sem nome';
     elements.projectTitle.textContent = name + ' · ' + currentSupply().label;
+    elements.printReportMeta.textContent = 'Alimentação: ' + currentSupply().label + ' · Quadro: ' + elements.boardSize.value;
   }
 
   function renderCircuits() {
@@ -796,6 +916,12 @@
   document.getElementById('add-room-button').addEventListener('click', openRoomModal);
   document.getElementById('add-point-button').addEventListener('click', openPointModal);
   elements.resetProject.addEventListener('click', restoreExampleProject);
+  elements.exportBackup.addEventListener('click', exportProjectBackup);
+  elements.importBackup.addEventListener('click', chooseBackupFile);
+  elements.printReport.addEventListener('click', printProjectReport);
+  elements.importProjectFile.addEventListener('change', function (event) {
+    importProjectBackup(event.target.files && event.target.files[0], event.target);
+  });
   document.getElementById('close-room-modal').addEventListener('click', closeRoomModal);
   document.getElementById('cancel-room-modal').addEventListener('click', closeRoomModal);
   document.getElementById('close-point-modal').addEventListener('click', closePointModal);
@@ -959,6 +1085,7 @@
     saveProjectState();
   });
   elements.boardSize.addEventListener('change', function () {
+    renderProjectTitle();
     renderBoard();
     saveProjectState();
   });
