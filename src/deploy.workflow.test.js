@@ -6,11 +6,14 @@ const workflowPath = path.join(__dirname, '..', '.github', 'workflows', 'deploy-
 const workflow = fs.readFileSync(workflowPath, 'utf8');
 
 assert.match(workflow, /actions\/configure-pages@v5/);
+assert.match(workflow, /actions\/github-script@v7/);
 assert.match(workflow, /actions\/upload-pages-artifact@v3/);
 assert.match(workflow, /actions\/deploy-pages@v4/);
 assert.match(workflow, /run: npm run check/);
 assert.match(workflow, /path: \.\/dist/);
 assert.match(workflow, /pages: write/);
 assert.match(workflow, /id-token: write/);
+assert.match(workflow, /createPagesSite/);
+assert.match(workflow, /build_type: 'workflow'/);
 
 console.log('✓ Fluxo de publicacao no GitHub Pages verificado.');
