@@ -6,6 +6,7 @@ const workflowPath = path.join(__dirname, '..', '.github', 'workflows', 'deploy-
 const workflow = fs.readFileSync(workflowPath, 'utf8');
 
 assert.match(workflow, /actions\/configure-pages@v5/);
+assert.match(workflow, /enablement: true/);
 assert.match(workflow, /actions\/upload-pages-artifact@v3/);
 assert.match(workflow, /actions\/deploy-pages@v4/);
 assert.match(workflow, /run: npm run check/);
