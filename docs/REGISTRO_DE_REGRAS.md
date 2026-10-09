@@ -11,6 +11,7 @@ Este arquivo é o inventário de regras do produto. Uma regra só passa a afetar
 | E-005 | Vínculo entre pontos e circuitos | Implementada — rastreabilidade | pontos selecionados, tensão e circuito | `electrical-engine.test.js` |
 | E-006 | Prontidão de dados de instalação | Implementada — validação de entrada, não dimensionamento | método, material, temperatura, agrupamento, comprimento e contexto de proteção | `electrical-engine.test.js` |
 | E-007 | Revisão de consistência do anteprojeto | Implementada — organização e rastreabilidade, não normativa | circuitos, pontos, ambientes, alimentação e dados de instalação | `electrical-engine.test.js` |
+| E-008 | Edição e exclusão rastreável | Implementada — integridade de dados, não normativa | identificadores, vínculos entre ambiente, ponto e circuito, alimentação | `electrical-engine.test.js`, `app.editing.test.js` |
 | E-010 | Seção de condutor | Bloqueada | método, material, temperatura, agrupamento, trajeto e demais condições | fonte técnica e casos de teste pendentes |
 | E-011 | Disjuntor e proteção | Bloqueada | corrente, condutor, método, coordenação e condições de proteção | fonte técnica e casos de teste pendentes |
 | E-012 | Queda de tensão | Bloqueada | comprimento, condutor, circuito e demanda | fonte técnica e casos de teste pendentes |

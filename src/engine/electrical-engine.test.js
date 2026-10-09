@@ -247,3 +247,81 @@ test('organiza uma revisão do anteprojeto sem aplicar critérios normativos', (
   assert.ok(review.items.some((item) => item.code === 'installation-data-pending' && item.title === 'Reserva'));
   assert.ok(review.items.some((item) => item.code === 'manual-circuit-entry' && item.title === 'Reserva'));
 });
+
+test('recalcula um circuito rastreável quando a potência de um ponto vinculado é editada', () => {
+  const rooms = [{ id: 'sala', name: 'Sala', type: 'Sala' }];
+  const points = [
+    { id: 'luz', roomId: 'sala', type: 'Iluminação', description: 'Luz', power: 60, voltage: 127 },
+    { id: 'rack', roomId: 'sala', type: 'Tomada de uso geral', description: 'Rack', power: 120, voltage: 127 }
+  ];
+  const circuits = [{
+    id: 'social', name: 'Circuito social', category: 'Iluminação', powerSource: 'linked-points',
+    pointIds: ['luz', 'rack'], power: 180, voltage: 127, phase: 'A'
+  }];
+
+  const result = engine.updatePointInProject({
+    id: 'luz', roomId: 'sala', type: 'Iluminação', description: 'Luz principal', power: 90, voltage: 127
+  }, points, circuits, rooms, 'three-127-220');
+
+  assert.equal(result.valid, true);
+  assert.equal(result.point.description, 'Luz principal');
+  assert.equal(result.circuits[0].power, 210);
+  assert.equal(result.circuits[0].voltage, 127);
+  assert.equal(result.circuits[0].phase, 'A');
+  assert.deepEqual(result.affectedCircuitIds, ['social']);
+  assert.equal(engine.validatePointCircuitLinks(result.circuits, result.points).valid, true);
+});
+
+test('preserva a derivação de carga ao editar rótulos de circuito criado por pontos', () => {
+  const circuits = [{
+    id: 'luz', name: 'Iluminação', category: 'Iluminação', powerSource: 'linked-points',
+    pointIds: ['p1'], power: 80, voltage: 127, phase: 'B'
+  }];
+
+  const result = engine.updateCircuitInProject({
+    id: 'luz', name: 'Iluminação revisada', category: 'Carga especial', power: 9999, voltage: 220
+  }, circuits, [{ id: 'p1', power: 80, voltage: 127 }], 'three-127-220');
+
+  assert.equal(result.valid, true);
+  assert.equal(result.circuit.name, 'Iluminação revisada');
+  assert.equal(result.circuit.category, 'Carga especial');
+  assert.equal(result.circuit.power, 80);
+  assert.equal(result.circuit.voltage, 127);
+  assert.equal(result.circuit.phase, 'B');
+  assert.deepEqual(result.lockedFields, ['power', 'voltage', 'phase', 'pointIds']);
+});
+
+test('permite editar circuito manual e preserva uma fase já compatível', () => {
+  const result = engine.updateCircuitInProject({
+    id: 'manual', name: 'TUG revisada', category: 'Tomadas de uso geral', power: 1450, voltage: 127
+  }, [{ id: 'manual', name: 'TUG', category: 'Tomadas de uso geral', power: 1200, voltage: 127, phase: 'C' }], [], 'three-127-220');
+
+  assert.equal(result.valid, true);
+  assert.equal(result.circuit.power, 1450);
+  assert.equal(result.circuit.phase, 'C');
+  assert.equal(result.circuit.powerSource, 'manual');
+});
+
+test('bloqueia exclusões que romperiam ambiente ou ponto rastreável', () => {
+  const rooms = [{ id: 'banheiro', name: 'Banheiro', type: 'Banheiro' }];
+  const points = [{ id: 'chuveiro', roomId: 'banheiro', type: 'Chuveiro', description: 'Chuveiro', power: 6800, voltage: 220 }];
+  const circuits = [{
+    id: 'chuveiro', name: 'Chuveiro', category: 'Chuveiro', powerSource: 'linked-points',
+    pointIds: ['chuveiro'], power: 6800, voltage: 220, phase: 'AB'
+  }];
+
+  const roomBlocked = engine.removeRoomFromProject('banheiro', rooms, points);
+  const pointBlocked = engine.removePointFromProject('chuveiro', points, circuits);
+  const circuitRemoved = engine.removeCircuitFromProject('chuveiro', circuits);
+  const pointRemoved = engine.removePointFromProject('chuveiro', points, circuitRemoved.circuits);
+  const roomRemoved = engine.removeRoomFromProject('banheiro', rooms, pointRemoved.points);
+
+  assert.equal(roomBlocked.valid, false);
+  assert.equal(roomBlocked.issues[0].code, 'room-has-points');
+  assert.equal(pointBlocked.valid, false);
+  assert.equal(pointBlocked.issues[0].code, 'point-linked-to-circuit');
+  assert.equal(circuitRemoved.valid, true);
+  assert.deepEqual(circuitRemoved.releasedPointIds, ['chuveiro']);
+  assert.equal(pointRemoved.valid, true);
+  assert.equal(roomRemoved.valid, true);
+});

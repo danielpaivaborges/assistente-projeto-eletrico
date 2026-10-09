@@ -19,6 +19,9 @@ O motor está em estado **preliminar**. Ele separa a lógica de cálculo da inte
 - Validação dos dados físicos mínimos de instalação por circuito: método, material, temperatura ambiente, agrupamento, comprimento e contexto de proteção.
 - Resumo de prontidão por circuito para indicar quando os dados podem seguir para uma futura regra técnica validada.
 - Revisão rastreável do anteprojeto, identificando conflitos de cadastro, pontos sem circuito, dados de instalação pendentes e circuitos lançados manualmente.
+- Edição segura de ambientes, pontos e circuitos, com validação das referências antes de aplicar a mudança.
+- Exclusão protegida de ambiente e ponto quando há registros dependentes; exclusão de circuito preserva seus pontos no inventário e torna o novo vínculo uma decisão explícita.
+- Recálculo dos campos derivados de um circuito criado por pontos quando um de seus pontos é atualizado, sem aceitar alteração manual de potência ou tensão nesse circuito.
 
 ## O que ainda não dimensiona
 

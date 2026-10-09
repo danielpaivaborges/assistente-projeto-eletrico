@@ -13,7 +13,7 @@
 }(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  var ENGINE_VERSION = '0.6.0-preliminar';
+  var ENGINE_VERSION = '0.9.0-preliminar';
   var ALL_PHASES = ['A', 'B', 'C'];
   var SUPPLIES = {
     'three-127-220': {
@@ -587,6 +587,69 @@
     return ids;
   }
 
+  function sameId(first, second) {
+    return String(first) === String(second);
+  }
+
+  function recordId(record, index) {
+    return record && record.id !== undefined ? record.id : index;
+  }
+
+  function recordIndex(records, id) {
+    var match = -1;
+
+    (records || []).some(function (record, index) {
+      if (!sameId(recordId(record, index), id)) return false;
+      match = index;
+      return true;
+    });
+
+    return match;
+  }
+
+  function copyRecord(record) {
+    var copied = Object.assign({}, record || {});
+
+    if (Array.isArray(copied.pointIds)) copied.pointIds = copied.pointIds.slice();
+    if (Array.isArray(copied.phases)) copied.phases = copied.phases.slice();
+    if (copied.installation && typeof copied.installation === 'object') {
+      copied.installation = Object.assign({}, copied.installation);
+    }
+
+    return copied;
+  }
+
+  function copyRecords(records) {
+    return (records || []).map(copyRecord);
+  }
+
+  function circuitPhaseIsCompatible(circuit, supply, voltage) {
+    var profile = getSupplyProfile(supply);
+    var phases = getCircuitPhases(circuit);
+    var expectedCount = getConnectionPhaseCount(profile, voltage);
+
+    return expectedCount !== null &&
+      phases.length === expectedCount &&
+      phases.every(function (phase) { return profile.phases.indexOf(phase) !== -1; });
+  }
+
+  function assignCircuitPhase(circuit, phase) {
+    var updated = copyRecord(circuit);
+    var phases = uniquePhases(phase);
+
+    updated.phase = phases.join('');
+    if (Array.isArray(circuit && circuit.phases)) updated.phases = phases;
+    return updated;
+  }
+
+  function validationFailure(issues, extra) {
+    return Object.assign({
+      valid: false,
+      issues: issues || [],
+      rulesetVersion: ENGINE_VERSION
+    }, extra || {});
+  }
+
   function getPointCircuitTraceability(circuits, points) {
     var pointById = {};
     var pointLinks = {};
@@ -985,6 +1048,353 @@
     };
   }
 
+  function updateRoomInProject(roomDraft, rooms) {
+    var roomIndex = recordIndex(rooms, roomDraft && roomDraft.id);
+    var copiedRooms = copyRecords(rooms);
+
+    if (roomIndex === -1) {
+      return validationFailure([{ code: 'room-not-found', roomId: roomDraft && roomDraft.id }], { rooms: copiedRooms });
+    }
+
+    var original = copiedRooms[roomIndex];
+    var validation = validateRoom(Object.assign({}, roomDraft || {}, { id: original.id }));
+
+    if (!validation.valid) {
+      return validationFailure(validation.issues, { rooms: copiedRooms });
+    }
+
+    copiedRooms[roomIndex] = Object.assign({}, original, validation.room, { id: original.id });
+
+    return {
+      valid: true,
+      issues: [],
+      rooms: copiedRooms,
+      room: copiedRooms[roomIndex],
+      rulesetVersion: ENGINE_VERSION
+    };
+  }
+
+  function removeRoomFromProject(roomId, rooms, points) {
+    var roomIndex = recordIndex(rooms, roomId);
+    var copiedRooms = copyRecords(rooms);
+
+    if (roomIndex === -1) {
+      return validationFailure([{ code: 'room-not-found', roomId: roomId }], { rooms: copiedRooms });
+    }
+
+    var originalRoom = copiedRooms[roomIndex];
+    var linkedPointIds = (points || []).filter(function (point) {
+      return point && sameId(point.roomId, originalRoom.id);
+    }).map(function (point, index) {
+      return recordId(point, index);
+    });
+
+    if (linkedPointIds.length) {
+      return validationFailure([{
+        code: 'room-has-points',
+        roomId: originalRoom.id,
+        pointIds: linkedPointIds
+      }], { rooms: copiedRooms });
+    }
+
+    copiedRooms.splice(roomIndex, 1);
+    return {
+      valid: true,
+      issues: [],
+      rooms: copiedRooms,
+      room: originalRoom,
+      rulesetVersion: ENGINE_VERSION
+    };
+  }
+
+  function updateCircuitInProject(circuitDraft, circuits, points, supply) {
+    var circuitIndex = recordIndex(circuits, circuitDraft && circuitDraft.id);
+    var copiedCircuits = copyRecords(circuits);
+    var source = circuitDraft || {};
+
+    if (circuitIndex === -1) {
+      return validationFailure([{ code: 'circuit-not-found', circuitId: source.id }], { circuits: copiedCircuits });
+    }
+
+    var original = copiedCircuits[circuitIndex];
+    var name = normalizedText(source.name);
+    var category = normalizedText(source.category);
+    var issues = [];
+
+    if (!name) issues.push({ code: 'missing-circuit-name' });
+    if (!category) issues.push({ code: 'missing-circuit-category' });
+
+    if (issues.length) return validationFailure(issues, { circuits: copiedCircuits });
+
+    if (original.powerSource === 'linked-points') {
+      copiedCircuits[circuitIndex] = Object.assign({}, original, {
+        id: original.id,
+        name: name,
+        category: category,
+        powerSource: 'linked-points'
+      });
+
+      return {
+        valid: true,
+        issues: [],
+        circuits: copiedCircuits,
+        circuit: copiedCircuits[circuitIndex],
+        lockedFields: ['power', 'voltage', 'phase', 'pointIds'],
+        rulesetVersion: ENGINE_VERSION
+      };
+    }
+
+    var power = positiveNumber(source.power);
+    var voltage = positiveNumber(source.voltage);
+    var supportedVoltages = getSupportedVoltages(supply);
+
+    if (power === null) issues.push({ code: 'invalid-circuit-power' });
+    if (voltage === null || supportedVoltages.indexOf(voltage) === -1) {
+      issues.push({ code: 'voltage-not-available-in-supply' });
+    }
+    if (issues.length) return validationFailure(issues, { circuits: copiedCircuits });
+
+    var otherCircuits = copiedCircuits.filter(function (circuit, index) { return index !== circuitIndex; });
+    var phase = circuitPhaseIsCompatible(original, supply, voltage)
+      ? getCircuitPhases(original).join('')
+      : suggestPhaseAssignment(otherCircuits, supply, voltage);
+
+    if (!phase) {
+      return validationFailure([{ code: 'could-not-suggest-circuit-phase' }], { circuits: copiedCircuits });
+    }
+
+    var updated = assignCircuitPhase(Object.assign({}, original, {
+      id: original.id,
+      name: name,
+      category: category,
+      power: power,
+      voltage: voltage,
+      powerSource: 'manual'
+    }), phase);
+    var supplyValidation = validateCircuitsForSupply([updated], supply);
+
+    if (!supplyValidation.valid) {
+      return validationFailure(supplyValidation.issues, { circuits: copiedCircuits });
+    }
+
+    copiedCircuits[circuitIndex] = updated;
+    return {
+      valid: true,
+      issues: [],
+      circuits: copiedCircuits,
+      circuit: updated,
+      lockedFields: [],
+      rulesetVersion: ENGINE_VERSION
+    };
+  }
+
+  function removeCircuitFromProject(circuitId, circuits) {
+    var circuitIndex = recordIndex(circuits, circuitId);
+    var copiedCircuits = copyRecords(circuits);
+
+    if (circuitIndex === -1) {
+      return validationFailure([{ code: 'circuit-not-found', circuitId: circuitId }], { circuits: copiedCircuits });
+    }
+
+    var removed = copiedCircuits[circuitIndex];
+    var releasedPointIds = uniqueIds(removed.pointIds || []);
+    copiedCircuits.splice(circuitIndex, 1);
+
+    return {
+      valid: true,
+      issues: [],
+      circuits: copiedCircuits,
+      circuit: removed,
+      releasedPointIds: releasedPointIds,
+      rulesetVersion: ENGINE_VERSION
+    };
+  }
+
+  function updatePointInProject(pointDraft, points, circuits, rooms, supply) {
+    var pointIndex = recordIndex(points, pointDraft && pointDraft.id);
+    var copiedPoints = copyRecords(points);
+    var copiedCircuits = copyRecords(circuits);
+    var source = pointDraft || {};
+
+    if (pointIndex === -1) {
+      return validationFailure([{ code: 'point-not-found', pointId: source.id }], {
+        points: copiedPoints,
+        circuits: copiedCircuits
+      });
+    }
+
+    var original = copiedPoints[pointIndex];
+    var validation = validatePoint(Object.assign({}, source, { id: original.id }), rooms, supply);
+
+    if (!validation.valid) {
+      return validationFailure(validation.issues, { points: copiedPoints, circuits: copiedCircuits });
+    }
+
+    var candidate = Object.assign({}, original, validation.point, { id: original.id });
+    var traceability = getPointCircuitTraceability(copiedCircuits, copiedPoints);
+    var linkedCircuitIds = (traceability.pointLinks[original.id] || []).slice();
+
+    if (linkedCircuitIds.length > 1) {
+      return validationFailure([{
+        code: 'point-linked-to-multiple-circuits',
+        pointId: original.id,
+        circuitIds: linkedCircuitIds
+      }], { points: copiedPoints, circuits: copiedCircuits });
+    }
+
+    copiedPoints[pointIndex] = candidate;
+
+    if (!linkedCircuitIds.length) {
+      return {
+        valid: true,
+        issues: [],
+        points: copiedPoints,
+        circuits: copiedCircuits,
+        point: candidate,
+        affectedCircuitIds: [],
+        rulesetVersion: ENGINE_VERSION
+      };
+    }
+
+    var linkedCircuitId = linkedCircuitIds[0];
+    var circuitIndex = recordIndex(copiedCircuits, linkedCircuitId);
+    var linkedCircuit = circuitIndex === -1 ? null : copiedCircuits[circuitIndex];
+
+    if (!linkedCircuit) {
+      return validationFailure([{
+        code: 'point-linked-circuit-not-found',
+        pointId: original.id,
+        circuitId: linkedCircuitId
+      }], { points: copyRecords(points), circuits: copiedCircuits });
+    }
+
+    var powerChanged = Number(candidate.power) !== Number(original.power);
+    var voltageChanged = Number(candidate.voltage) !== Number(original.voltage);
+
+    if (linkedCircuit.powerSource !== 'linked-points') {
+      if (powerChanged || voltageChanged) {
+        return validationFailure([{
+          code: 'point-linked-to-manual-circuit',
+          pointId: original.id,
+          circuitId: linkedCircuit.id
+        }], { points: copyRecords(points), circuits: copiedCircuits });
+      }
+
+      return {
+        valid: true,
+        issues: [],
+        points: copiedPoints,
+        circuits: copiedCircuits,
+        point: candidate,
+        affectedCircuitIds: [linkedCircuit.id],
+        rulesetVersion: ENGINE_VERSION
+      };
+    }
+
+    var pointIds = uniqueIds(linkedCircuit.pointIds || []);
+    var selectedPoints = [];
+    var issues = [];
+
+    pointIds.forEach(function (pointId) {
+      var matchedIndex = recordIndex(copiedPoints, pointId);
+      var point = matchedIndex === -1 ? null : copiedPoints[matchedIndex];
+
+      if (!point) {
+        issues.push({ code: 'linked-point-not-found', circuitId: linkedCircuit.id, pointId: pointId });
+        return;
+      }
+
+      if (positiveNumber(point.power) === null) {
+        issues.push({ code: 'linked-circuit-point-has-invalid-power', circuitId: linkedCircuit.id, pointId: pointId });
+        return;
+      }
+
+      selectedPoints.push(point);
+    });
+
+    var voltages = uniqueIds(selectedPoints.map(function (point) { return point.voltage; }));
+    if (selectedPoints.length && voltages.length !== 1) {
+      issues.push({ code: 'linked-circuit-point-voltage-conflict', circuitId: linkedCircuit.id });
+    }
+
+    if (issues.length) {
+      return validationFailure(issues, { points: copyRecords(points), circuits: copiedCircuits });
+    }
+
+    var derivedPower = selectedPoints.reduce(function (sum, point) {
+      return sum + positiveNumber(point.power);
+    }, 0);
+    var derivedVoltage = Number(voltages[0]);
+    var otherCircuits = copiedCircuits.filter(function (circuit, index) { return index !== circuitIndex; });
+    var phase = circuitPhaseIsCompatible(linkedCircuit, supply, derivedVoltage)
+      ? getCircuitPhases(linkedCircuit).join('')
+      : suggestPhaseAssignment(otherCircuits, supply, derivedVoltage);
+
+    if (!phase) {
+      return validationFailure([{ code: 'could-not-suggest-circuit-phase', circuitId: linkedCircuit.id }], {
+        points: copyRecords(points),
+        circuits: copiedCircuits
+      });
+    }
+
+    var updatedCircuit = assignCircuitPhase(Object.assign({}, linkedCircuit, {
+      power: derivedPower,
+      voltage: derivedVoltage,
+      powerSource: 'linked-points'
+    }), phase);
+    var supplyValidation = validateCircuitsForSupply([updatedCircuit], supply);
+
+    if (!supplyValidation.valid) {
+      return validationFailure(supplyValidation.issues, { points: copyRecords(points), circuits: copiedCircuits });
+    }
+
+    copiedCircuits[circuitIndex] = updatedCircuit;
+    return {
+      valid: true,
+      issues: [],
+      points: copiedPoints,
+      circuits: copiedCircuits,
+      point: candidate,
+      affectedCircuitIds: [updatedCircuit.id],
+      rulesetVersion: ENGINE_VERSION
+    };
+  }
+
+  function removePointFromProject(pointId, points, circuits) {
+    var pointIndex = recordIndex(points, pointId);
+    var copiedPoints = copyRecords(points);
+    var copiedCircuits = copyRecords(circuits);
+
+    if (pointIndex === -1) {
+      return validationFailure([{ code: 'point-not-found', pointId: pointId }], {
+        points: copiedPoints,
+        circuits: copiedCircuits
+      });
+    }
+
+    var point = copiedPoints[pointIndex];
+    var traceability = getPointCircuitTraceability(copiedCircuits, copiedPoints);
+    var linkedCircuitIds = (traceability.pointLinks[point.id] || []).slice();
+
+    if (linkedCircuitIds.length) {
+      return validationFailure([{
+        code: 'point-linked-to-circuit',
+        pointId: point.id,
+        circuitIds: linkedCircuitIds
+      }], { points: copiedPoints, circuits: copiedCircuits });
+    }
+
+    copiedPoints.splice(pointIndex, 1);
+    return {
+      valid: true,
+      issues: [],
+      points: copiedPoints,
+      circuits: copiedCircuits,
+      point: point,
+      rulesetVersion: ENGINE_VERSION
+    };
+  }
+
   return {
     ENGINE_VERSION: ENGINE_VERSION,
     calculateCurrent: calculateCurrent,
@@ -999,6 +1409,9 @@
     getSupportedVoltages: getSupportedVoltages,
     getSizingReadiness: getSizingReadiness,
     getPointCircuitTraceability: getPointCircuitTraceability,
+    removeCircuitFromProject: removeCircuitFromProject,
+    removePointFromProject: removePointFromProject,
+    removeRoomFromProject: removeRoomFromProject,
     summarizeProjectReview: summarizeProjectReview,
     summarizeInstallationReadiness: summarizeInstallationReadiness,
     suggestPhaseAssignment: suggestPhaseAssignment,
@@ -1008,6 +1421,9 @@
     validatePoint: validatePoint,
     validateProjectInventory: validateProjectInventory,
     validateRoom: validateRoom,
-    validateInstallationData: validateInstallationData
+    validateInstallationData: validateInstallationData,
+    updateCircuitInProject: updateCircuitInProject,
+    updatePointInProject: updatePointInProject,
+    updateRoomInProject: updateRoomInProject
   };
 }));

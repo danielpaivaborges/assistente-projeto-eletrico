@@ -276,9 +276,10 @@
         outline: none;
       }
       .field input:focus, .field select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(22,119,200,.12); }
+      .field input:disabled, .field select:disabled { border-color: #d8e0e8; background: #f4f7fa; color: #77879a; cursor: not-allowed; }
 
       .table-wrap { overflow-x: auto; }
-      table { width: 100%; border-collapse: collapse; min-width: 790px; }
+      table { width: 100%; border-collapse: collapse; min-width: 900px; }
       th { padding: 11px 12px; border-bottom: 1px solid #dee7ef; color: #6c7b8e; font-size: .69rem; font-weight: 800; letter-spacing: .06em; text-align: left; text-transform: uppercase; }
       td { padding: 12px; border-bottom: 1px solid #edf1f5; color: #31445b; font-size: .86rem; vertical-align: middle; }
       tr:last-child td { border-bottom: 0; }
@@ -304,6 +305,21 @@
 
       .technical-line { color: #516477; font-size: .78rem; white-space: nowrap; }
       .circuit-card-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+      .row-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 6px; }
+      .row-action {
+        min-height: 29px;
+        padding: 5px 7px;
+        border: 1px solid #c9d8e6;
+        border-radius: 7px;
+        background: #ffffff;
+        color: #32617f;
+        font-size: .68rem;
+        font-weight: 800;
+      }
+      .row-action:hover { border-color: #88b8d8; background: #eff8ff; }
+      .row-action-danger { border-color: #efd0d5; color: #aa3d4b; }
+      .row-action-danger:hover { border-color: #df9da8; background: #fff3f4; }
+      .table-actions { white-space: nowrap; }
 
       .board-body { padding: 17px 19px 19px; }
       .board-caption { margin: 0 0 13px; color: var(--muted); font-size: .82rem; }
@@ -400,6 +416,8 @@
       .inventory-column-head p { margin: 3px 0 0; color: #78879a; font-size: .73rem; }
       .inventory-list { display: grid; gap: 8px; }
       .inventory-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 54px; padding: 10px 11px; border: 1px solid #e3ebf3; border-radius: 10px; background: #fbfdff; }
+      .inventory-row > div:first-child { min-width: 0; }
+      .inventory-row .row-actions { margin-left: auto; }
       .inventory-name { display: block; overflow: hidden; color: #244059; font-size: .82rem; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
       .inventory-meta { display: block; margin-top: 3px; color: #78879a; font-size: .72rem; }
       .inventory-type { color: #1877a9; font-weight: 750; }
@@ -561,7 +579,7 @@
         </nav>
 
         <div class="side-footer">
-          <strong>Produto v0.8</strong><br>
+          <strong>Produto v0.9</strong><br>
           Anteprojeto revisável · Brasil
         </div>
       </aside>
@@ -717,6 +735,7 @@
                       <th>Fase</th>
                       <th>Pontos</th>
                       <th>Corrente / validação</th>
+                      <th>Ações</th>
                     </tr>
                   </thead>
                   <tbody id="circuits-body"></tbody>
@@ -869,10 +888,10 @@
               <input id="room-area" type="number" min="0.01" step="0.01" placeholder="Opcional">
             </div>
           </div>
-          <p class="form-help">A área é apenas descritiva nesta etapa. Regras de quantidade mínima de pontos ainda não são inferidas pelo sistema.</p>
+          <p class="form-help" id="room-form-help">A área é apenas descritiva nesta etapa. Regras de quantidade mínima de pontos ainda não são inferidas pelo sistema.</p>
           <div class="modal-actions">
             <button class="button button-secondary" type="button" id="cancel-room-modal">Cancelar</button>
-            <button class="button button-primary" type="submit">Adicionar ambiente</button>
+            <button class="button button-primary" type="submit" id="room-submit">Adicionar ambiente</button>
           </div>
         </form>
       </div>
@@ -917,10 +936,10 @@
               <select id="point-voltage"></select>
             </div>
           </div>
-          <p class="form-help">A potência é uma previsão da carga; ela não substitui a análise de demanda, condutor ou proteção.</p>
+          <p class="form-help" id="point-form-help">A potência é uma previsão da carga; ela não substitui a análise de demanda, condutor ou proteção.</p>
           <div class="modal-actions">
             <button class="button button-secondary" type="button" id="cancel-point-modal">Cancelar</button>
-            <button class="button button-primary" type="submit">Adicionar ponto</button>
+            <button class="button button-primary" type="submit" id="point-submit">Adicionar ponto</button>
           </div>
         </form>
       </div>
@@ -1065,10 +1084,10 @@
               <input id="circuit-power" type="number" min="1" required placeholder="Ex.: 1200">
             </div>
           </div>
-          <p class="form-help">O protótipo estimará a corrente e indicará os dados de instalação ainda necessários. A seleção de condutor e proteção exige validação técnica.</p>
+          <p class="form-help" id="circuit-form-help">O protótipo estimará a corrente e indicará os dados de instalação ainda necessários. A seleção de condutor e proteção exige validação técnica.</p>
           <div class="modal-actions">
             <button class="button button-secondary" type="button" id="cancel-modal">Cancelar</button>
-            <button class="button button-primary" type="submit">Adicionar ao projeto</button>
+            <button class="button button-primary" type="submit" id="circuit-submit">Adicionar ao projeto</button>
           </div>
         </form>
       </div>

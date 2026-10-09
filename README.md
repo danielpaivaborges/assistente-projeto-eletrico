@@ -2,7 +2,7 @@
 
 Ferramenta em construção para organizar anteprojetos de instalações elétricas residenciais no Brasil.
 
-> Estado atual: **v0.8 — backup e relatório do anteprojeto**. A aplicação organiza o imóvel, as cargas, os circuitos e as condições de instalação; salva localmente, gera backup portátil, importa cópias compatíveis e imprime um relatório de conferência sem recomendar condutor ou proteção.
+> Estado atual: **v0.9 — edição rastreável do anteprojeto**. A aplicação organiza o imóvel, as cargas, os circuitos e as condições de instalação; salva localmente, gera backup portátil, importa cópias compatíveis, imprime um relatório de conferência e permite editar ou excluir registros sem quebrar vínculos silenciosamente.
 
 ## O que já funciona
 
@@ -13,6 +13,9 @@ Ferramenta em construção para organizar anteprojetos de instalações elétric
 - Indicador de prontidão que separa dados pendentes, inválidos e completos para futura avaliação por regras técnicas.
 - Painel de revisão que separa conflitos de dados, informações a completar e circuitos lançados manualmente.
 - Conferência de rastreabilidade entre pontos, circuitos, alimentação e inventário, sem impor critérios normativos.
+- Edição de ambientes, pontos e circuitos já cadastrados, preservando a origem da carga.
+- Exclusão protegida: ambiente com pontos e ponto vinculado a circuito não são removidos sem que o vínculo seja resolvido; ao excluir um circuito, seus pontos permanecem no inventário para nova organização.
+- Recálculo da potência e da tensão de circuitos criados por pontos quando um ponto vinculado é alterado.
 - Salvamento automático local do projeto no navegador, com restauração ao reabrir a página.
 - Restauração consciente do modelo de exemplo, protegida por confirmação.
 - Exportação de backup em JSON e importação confirmada de arquivos compatíveis.
@@ -61,7 +64,7 @@ O comando atualiza os arquivos de navegador em `dist/` e executa os testes do mo
 
 ## Próximas etapas
 
-1. Permitir edição e exclusão rastreável de ambientes, pontos e circuitos já cadastrados.
-2. Registrar fontes, edição e casos de teste antes de introduzir qualquer regra técnica.
-3. Avaliar queda de tensão somente após validar as regras e os dados necessários.
-4. Evoluir o relatório para um documento exportável com histórico de revisões.
+1. Registrar fontes, edição e casos de teste antes de introduzir qualquer regra técnica.
+2. Avaliar queda de tensão somente após validar as regras e os dados necessários.
+3. Evoluir o relatório para um documento exportável com histórico de revisões.
+4. Planejar autenticação e sincronização somente depois de definir a política de privacidade e colaboração.
